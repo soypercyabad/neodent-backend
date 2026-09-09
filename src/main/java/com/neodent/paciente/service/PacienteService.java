@@ -1,0 +1,258 @@
+package com.neodent.paciente.service;
+
+import com.neodent.paciente.dto.ActualizarPacienteRequest;
+import com.neodent.paciente.dto.CrearPacienteRequest;
+import com.neodent.paciente.dto.PacienteResponse;
+import com.neodent.paciente.mapper.PacienteMapper;
+import com.neodent.paciente.model.Paciente;
+import com.neodent.paciente.model.TipoDocumento;
+import com.neodent.paciente.repository.PacienteRepository;
+import com.neodent.paciente.repository.TipoDocumentoRepository;
+import com.neodent.shared.exception.ConflictException;
+import com.neodent.shared.exception.ResourceNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class PacienteService {
+
+    private final PacienteRepository pacienteRepository;
+    private final TipoDocumentoRepository tipoDocumentoRepository;
+    private final PacienteMapper pacienteMapper;
+
+    @Transactional(readOnly = true)
+    public PacienteResponse buscarPorDocumento(
+        String tipoDocumento,
+        String numeroDocumento
+    ) {
+
+        Paciente paciente = pacienteRepository
+            .findByTipoDocumentoCodigoAndNumeroDocumento(
+                tipoDocumento.trim().toUpperCase(),
+                numeroDocumento.trim()
+            )
+            .orElseThrow(() ->
+                new ResourceNotFoundException("Paciente no encontrado")
+            );
+
+        return pacienteMapper.toResponse(paciente);
+    }
+
+
+    @Transactional
+    public PacienteResponse crear(CrearPacienteRequest request) {
+
+        String codigoDocumento =
+            request.tipoDocumento().trim().toUpperCase();
+
+        String numeroDocumento =
+            request.numeroDocumento().trim();
+
+        TipoDocumento tipoDocumento = tipoDocumentoRepository
+            .findByCodigoAndActivoTrue(codigoDocumento)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Tipo de documento no válido"
+                )
+            );
+
+        boolean existe =
+            pacienteRepository
+                .existsByTipoDocumentoCodigoAndNumeroDocumento(
+                    codigoDocumento,
+                    numeroDocumento
+                );
+
+        if (existe) {
+            throw new ConflictException(
+                "Ya existe un paciente registrado con este documento"
+            );
+        }
+
+        Paciente paciente = new Paciente();
+
+        paciente.setTipoDocumento(tipoDocumento);
+        paciente.setNumeroDocumento(numeroDocumento);
+
+        paciente.setNombres(
+            request.nombres().trim()
+        );
+
+        paciente.setApellidoPaterno(
+            request.apellidoPaterno().trim()
+        );
+
+        paciente.setApellidoMaterno(
+            normalizarTextoOpcional(request.apellidoMaterno())
+        );
+
+        paciente.setFechaNacimiento(
+            request.fechaNacimiento()
+        );
+
+        paciente.setTelefono(
+            normalizarTextoOpcional(request.telefono())
+        );
+
+        paciente.setEmail(
+            normalizarEmail(request.email())
+        );
+
+        paciente.setDireccion(
+            normalizarTextoOpcional(request.direccion())
+        );
+
+        paciente.setUsuario(null);
+        paciente.setActivo(true);
+
+        Paciente pacienteGuardado =
+            pacienteRepository.save(paciente);
+
+        return pacienteMapper.toResponse(pacienteGuardado);
+    }
+
+
+    @Transactional
+    public PacienteResponse actualizar(
+        Long id,
+        ActualizarPacienteRequest request
+    ) {
+
+        Paciente paciente = pacienteRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Paciente no encontrado"
+                )
+            );
+
+        if (!paciente.getActivo()) {
+            throw new ConflictException(
+                "No se puede modificar un paciente inactivo"
+            );
+        }
+
+        paciente.setNombres(
+            request.nombres().trim()
+        );
+
+        paciente.setApellidoPaterno(
+            request.apellidoPaterno().trim()
+        );
+
+        paciente.setApellidoMaterno(
+            normalizarTextoOpcional(
+                request.apellidoMaterno()
+            )
+        );
+
+        paciente.setFechaNacimiento(
+            request.fechaNacimiento()
+        );
+
+        paciente.setTelefono(
+            normalizarTextoOpcional(
+                request.telefono()
+            )
+        );
+
+        paciente.setEmail(
+            normalizarEmail(
+                request.email()
+            )
+        );
+
+        paciente.setDireccion(
+            normalizarTextoOpcional(
+                request.direccion()
+            )
+        );
+
+        Paciente actualizado =
+            pacienteRepository.save(paciente);
+
+        return pacienteMapper.toResponse(actualizado);
+    }
+
+
+    @Transactional
+    public void activar(Long id) {
+
+        Paciente paciente = pacienteRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Paciente no encontrado"
+                )
+            );
+
+        if (paciente.getActivo()) {
+            throw new ConflictException(
+                "El paciente ya se encuentra activo"
+            );
+        }
+
+        paciente.setActivo(true);
+
+        pacienteRepository.save(paciente);
+    }
+
+
+    private String normalizarTextoOpcional(String valor) {
+
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+
+        return valor.trim();
+    }
+
+
+    private String normalizarEmail(String email) {
+
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        return email.trim().toLowerCase();
+    }
+
+    @Transactional(readOnly = true)
+    public PacienteResponse buscarPorId(Long id) {
+
+        Paciente paciente = pacienteRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Paciente no encontrado"
+                )
+            );
+
+        return pacienteMapper.toResponse(paciente);
+    }
+
+
+    @Transactional
+    public void desactivar(Long id) {
+
+        Paciente paciente = pacienteRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Paciente no encontrado"
+                )
+            );
+
+        if (!paciente.getActivo()) {
+            throw new ConflictException(
+                "El paciente ya se encuentra inactivo"
+            );
+        }
+
+        paciente.setActivo(false);
+
+        pacienteRepository.save(paciente);
+    }
+}
