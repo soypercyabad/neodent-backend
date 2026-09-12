@@ -10,6 +10,8 @@ import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.paciente.repository.TipoDocumentoRepository;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
+import com.neodent.usuario.model.Usuario;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ public class PacienteService {
     private final PacienteRepository pacienteRepository;
     private final TipoDocumentoRepository tipoDocumentoRepository;
     private final PacienteMapper pacienteMapper;
+
 
     @Transactional(readOnly = true)
     public PacienteResponse buscarPorDocumento(
@@ -34,83 +37,114 @@ public class PacienteService {
                 numeroDocumento.trim()
             )
             .orElseThrow(() ->
-                new ResourceNotFoundException("Paciente no encontrado")
+                new ResourceNotFoundException(
+                    "Paciente no encontrado"
+                )
             );
 
         return pacienteMapper.toResponse(paciente);
     }
 
 
+    @Transactional(readOnly = true)
+    public PacienteResponse buscarPorId(Long id) {
+
+        Paciente paciente =
+            obtenerPacienteOFail(id);
+
+        return pacienteMapper.toResponse(paciente);
+    }
+
+
     @Transactional
-    public PacienteResponse crear(CrearPacienteRequest request) {
+    public PacienteResponse crear(
+        CrearPacienteRequest request
+    ) {
 
         String codigoDocumento =
-            request.tipoDocumento().trim().toUpperCase();
+            request.tipoDocumento()
+                .trim()
+                .toUpperCase();
 
         String numeroDocumento =
-            request.numeroDocumento().trim();
+            request.numeroDocumento()
+                .trim();
 
-        TipoDocumento tipoDocumento = tipoDocumentoRepository
-            .findByCodigoAndActivoTrue(codigoDocumento)
-            .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Tipo de documento no válido"
+        TipoDocumento tipoDocumento =
+            tipoDocumentoRepository
+                .findByCodigoAndActivoTrue(
+                    codigoDocumento
                 )
-            );
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Tipo de documento no válido"
+                    )
+                );
 
-        boolean existe =
+        boolean existeDocumento =
             pacienteRepository
                 .existsByTipoDocumentoCodigoAndNumeroDocumento(
                     codigoDocumento,
                     numeroDocumento
                 );
 
-        if (existe) {
+        if (existeDocumento) {
             throw new ConflictException(
                 "Ya existe un paciente registrado con este documento"
             );
         }
 
+        String telefono =
+            normalizarTextoOpcional(
+                request.telefono()
+            );
+
+        String email =
+            normalizarEmail(
+                request.email()
+            );
+
+        validarDatosUnicos(
+            email,
+            telefono,
+            null
+        );
+
         Paciente paciente = new Paciente();
 
         paciente.setTipoDocumento(tipoDocumento);
         paciente.setNumeroDocumento(numeroDocumento);
-
         paciente.setNombres(
             request.nombres().trim()
         );
-
         paciente.setApellidoPaterno(
             request.apellidoPaterno().trim()
         );
-
         paciente.setApellidoMaterno(
-            normalizarTextoOpcional(request.apellidoMaterno())
+            normalizarTextoOpcional(
+                request.apellidoMaterno()
+            )
         );
-
         paciente.setFechaNacimiento(
             request.fechaNacimiento()
         );
-
-        paciente.setTelefono(
-            normalizarTextoOpcional(request.telefono())
-        );
-
-        paciente.setEmail(
-            normalizarEmail(request.email())
-        );
-
+        paciente.setTelefono(telefono);
+        paciente.setEmail(email);
         paciente.setDireccion(
-            normalizarTextoOpcional(request.direccion())
+            normalizarTextoOpcional(
+                request.direccion()
+            )
         );
 
         paciente.setUsuario(null);
         paciente.setActivo(true);
 
-        Paciente pacienteGuardado =
+        Paciente guardado =
             pacienteRepository.save(paciente);
 
-        return pacienteMapper.toResponse(pacienteGuardado);
+        return pacienteMapper.toResponse(
+            guardado
+        );
     }
 
 
@@ -120,19 +154,30 @@ public class PacienteService {
         ActualizarPacienteRequest request
     ) {
 
-        Paciente paciente = pacienteRepository
-            .findById(id)
-            .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Paciente no encontrado"
-                )
-            );
+        Paciente paciente =
+            obtenerPacienteOFail(id);
 
         if (!paciente.getActivo()) {
             throw new ConflictException(
                 "No se puede modificar un paciente inactivo"
             );
         }
+
+        String telefono =
+            normalizarTextoOpcional(
+                request.telefono()
+            );
+
+        String email =
+            normalizarEmail(
+                request.email()
+            );
+
+        validarDatosUnicos(
+            email,
+            telefono,
+            id
+        );
 
         paciente.setNombres(
             request.nombres().trim()
@@ -152,17 +197,8 @@ public class PacienteService {
             request.fechaNacimiento()
         );
 
-        paciente.setTelefono(
-            normalizarTextoOpcional(
-                request.telefono()
-            )
-        );
-
-        paciente.setEmail(
-            normalizarEmail(
-                request.email()
-            )
-        );
+        paciente.setTelefono(telefono);
+        paciente.setEmail(email);
 
         paciente.setDireccion(
             normalizarTextoOpcional(
@@ -173,20 +209,17 @@ public class PacienteService {
         Paciente actualizado =
             pacienteRepository.save(paciente);
 
-        return pacienteMapper.toResponse(actualizado);
+        return pacienteMapper.toResponse(
+            actualizado
+        );
     }
 
 
     @Transactional
     public void activar(Long id) {
 
-        Paciente paciente = pacienteRepository
-            .findById(id)
-            .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Paciente no encontrado"
-                )
-            );
+        Paciente paciente =
+            obtenerPacienteOFail(id);
 
         if (paciente.getActivo()) {
             throw new ConflictException(
@@ -200,50 +233,11 @@ public class PacienteService {
     }
 
 
-    private String normalizarTextoOpcional(String valor) {
-
-        if (valor == null || valor.isBlank()) {
-            return null;
-        }
-
-        return valor.trim();
-    }
-
-
-    private String normalizarEmail(String email) {
-
-        if (email == null || email.isBlank()) {
-            return null;
-        }
-
-        return email.trim().toLowerCase();
-    }
-
-    @Transactional(readOnly = true)
-    public PacienteResponse buscarPorId(Long id) {
-
-        Paciente paciente = pacienteRepository
-            .findById(id)
-            .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Paciente no encontrado"
-                )
-            );
-
-        return pacienteMapper.toResponse(paciente);
-    }
-
-
     @Transactional
     public void desactivar(Long id) {
 
-        Paciente paciente = pacienteRepository
-            .findById(id)
-            .orElseThrow(() ->
-                new ResourceNotFoundException(
-                    "Paciente no encontrado"
-                )
-            );
+        Paciente paciente =
+            obtenerPacienteOFail(id);
 
         if (!paciente.getActivo()) {
             throw new ConflictException(
@@ -254,5 +248,177 @@ public class PacienteService {
         paciente.setActivo(false);
 
         pacienteRepository.save(paciente);
+    }
+
+
+    @Transactional
+    public Paciente crearConUsuario(
+        CrearPacienteRequest request,
+        Usuario usuario
+    ) {
+
+        String codigoDocumento =
+            request.tipoDocumento()
+                .trim()
+                .toUpperCase();
+
+        String numeroDocumento =
+            request.numeroDocumento().trim();
+
+        TipoDocumento tipoDocumento =
+            tipoDocumentoRepository
+                .findByCodigoAndActivoTrue(
+                    codigoDocumento
+                )
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Tipo de documento no válido"
+                    )
+                );
+
+        if (
+            pacienteRepository
+                .existsByTipoDocumentoCodigoAndNumeroDocumento(
+                    codigoDocumento,
+                    numeroDocumento
+                )
+        ) {
+            throw new ConflictException(
+                "Ya existe un paciente registrado con este documento"
+            );
+        }
+
+        String telefono =
+            normalizarTextoOpcional(
+                request.telefono()
+            );
+
+        String email =
+            normalizarEmail(
+                request.email()
+            );
+
+        validarDatosUnicos(
+            email,
+            telefono,
+            null
+        );
+
+        Paciente paciente = new Paciente();
+
+        paciente.setTipoDocumento(tipoDocumento);
+        paciente.setNumeroDocumento(numeroDocumento);
+        paciente.setNombres(
+            request.nombres().trim()
+        );
+        paciente.setApellidoPaterno(
+            request.apellidoPaterno().trim()
+        );
+        paciente.setApellidoMaterno(
+            normalizarTextoOpcional(
+                request.apellidoMaterno()
+            )
+        );
+        paciente.setFechaNacimiento(
+            request.fechaNacimiento()
+        );
+        paciente.setTelefono(telefono);
+        paciente.setEmail(email);
+        paciente.setDireccion(
+            normalizarTextoOpcional(
+                request.direccion()
+            )
+        );
+
+        paciente.setUsuario(usuario);
+        paciente.setActivo(true);
+
+        return pacienteRepository.save(paciente);
+    }
+
+
+    private Paciente obtenerPacienteOFail(
+        Long id
+    ) {
+
+        return pacienteRepository
+            .findById(id)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Paciente no encontrado"
+                )
+            );
+    }
+
+
+    private void validarDatosUnicos(
+        String email,
+        String telefono,
+        Long pacienteId
+    ) {
+
+        if (email != null) {
+
+            boolean existeEmail =
+                pacienteId == null
+                    ? pacienteRepository
+                        .existsByEmailIgnoreCase(email)
+                    : pacienteRepository
+                        .existsByEmailIgnoreCaseAndIdNot(
+                            email,
+                            pacienteId
+                        );
+
+            if (existeEmail) {
+                throw new ConflictException(
+                    "Ya existe un paciente registrado con este correo electrónico"
+                );
+            }
+        }
+
+        if (telefono != null) {
+
+            boolean existeTelefono =
+                pacienteId == null
+                    ? pacienteRepository
+                        .existsByTelefono(telefono)
+                    : pacienteRepository
+                        .existsByTelefonoAndIdNot(
+                            telefono,
+                            pacienteId
+                        );
+
+            if (existeTelefono) {
+                throw new ConflictException(
+                    "Ya existe un paciente registrado con este número de teléfono"
+                );
+            }
+        }
+    }
+
+
+    private String normalizarTextoOpcional(
+        String valor
+    ) {
+
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+
+        return valor.trim();
+    }
+
+
+    private String normalizarEmail(
+        String email
+    ) {
+
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        return email
+            .trim()
+            .toLowerCase();
     }
 }

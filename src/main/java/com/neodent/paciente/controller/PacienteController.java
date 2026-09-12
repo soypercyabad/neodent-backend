@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
     name = "Pacientes",
     description = "Operaciones para consulta, registro, actualización y gestión del estado de pacientes"
 )
+@SecurityRequirement(name = "bearerAuth")
 public class PacienteController {
 
     private final PacienteService pacienteService;
