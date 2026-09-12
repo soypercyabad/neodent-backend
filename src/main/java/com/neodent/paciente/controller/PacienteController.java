@@ -1,5 +1,8 @@
 package com.neodent.paciente.controller;
 
+import com.neodent.auth.service.AccountInvitation;
+import com.neodent.auth.service.AccountInvitationService;
+import com.neodent.paciente.dto.AccountInvitationTestResponse;
 import com.neodent.paciente.dto.ActualizarPacienteRequest;
 import com.neodent.paciente.dto.CrearPacienteRequest;
 import com.neodent.paciente.dto.PacienteResponse;
@@ -10,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +28,11 @@ import org.springframework.web.bind.annotation.*;
     name = "Pacientes",
     description = "Operaciones para consulta, registro, actualización y gestión del estado de pacientes"
 )
+@SecurityRequirement(name = "bearerAuth")
 public class PacienteController {
 
     private final PacienteService pacienteService;
-
+    private final AccountInvitationService accountInvitationService;
 
     @Operation(
         summary = "Buscar paciente por ID",
@@ -246,5 +251,27 @@ public class PacienteController {
     ) {
 
         pacienteService.activar(id);
+    }
+
+
+    @Operation(
+        summary = "Generar invitación de cuenta  (Temporal testing backend)",
+        description = """
+            Endpoint temporal para probar el flujo
+            de activación de pacientes.
+            """
+    )
+    @PostMapping("/{id}/account-invitation")
+    public AccountInvitationTestResponse
+    generarInvitacion(
+        @PathVariable Long id
+    ) {
+
+        AccountInvitation invitacion =
+            accountInvitationService.generar(id);
+
+        return new AccountInvitationTestResponse(
+            invitacion.activationUrl()
+        );
     }
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restablecer contraseña - NeoDent</title>
+    <title>Confirmación de correo - NeoDent</title>
 </head>
 
 <body style="
@@ -22,7 +22,7 @@
         opacity: 0;
         color: transparent;
     ">
-        Restablece la contraseña de tu cuenta NeoDent.
+        Confirma tu correo electrónico para activar tu cuenta en NeoDent.
     </div>
 
     <!-- Contenedor general -->
@@ -152,7 +152,7 @@
                                     color: #111827;
                                 "
                             >
-                                Restablece tu contraseña
+                                Confirma tu correo electrónico
                             </h2>
 
                             <!-- Descripción -->
@@ -165,27 +165,15 @@
                                     color: #4b5563;
                                 "
                             >
-                                Recibimos una solicitud para restablecer la contraseña
-                                de tu cuenta de
+                                Estás a un paso de activar tu cuenta en
                                 <strong style="color: #0f766e;">
                                     NeoDent
                                 </strong>.
-                            </p>
-
-                            <p
-                                style="
-                                    margin: 0 0 28px 0;
-                                    text-align: center;
-                                    font-size: 15px;
-                                    line-height: 1.6;
-                                    color: #4b5563;
-                                "
-                            >
-                                Haz clic en el siguiente botón para crear una nueva contraseña:
+                                Usa el siguiente código para verificar tu correo electrónico:
                             </p>
 
                             <!-- ========================= -->
-                            <!-- BOTÓN -->
+                            <!-- CÓDIGO OTP -->
                             <!-- ========================= -->
                             <table
                                 width="100%"
@@ -202,34 +190,48 @@
                                             cellspacing="0"
                                             border="0"
                                             role="presentation"
+                                            style="
+                                                width: 100%;
+                                                max-width: 300px;
+                                                background-color: #f0fdfa;
+                                                border: 1px solid #99f6e4;
+                                                border-radius: 10px;
+                                            "
                                         >
                                             <tr>
                                                 <td
                                                     align="center"
-                                                    bgcolor="#0f766e"
                                                     style="
-                                                        border-radius: 8px;
-                                                        background-color: #0f766e;
+                                                        padding: 22px 20px;
                                                     "
                                                 >
-                                                    <a
-                                                        th:href="${resetUrl}"
-                                                        href="#"
+
+                                                    <div
                                                         style="
-                                                            display: inline-block;
-                                                            padding: 14px 28px;
-                                                            font-family: Arial, Helvetica, sans-serif;
-                                                            font-size: 15px;
-                                                            line-height: 20px;
-                                                            font-weight: bold;
-                                                            color: #ffffff;
-                                                            text-decoration: none;
-                                                            border-radius: 8px;
-                                                            background-color: #0f766e;
+                                                            font-size: 12px;
+                                                            line-height: 18px;
+                                                            text-transform: uppercase;
+                                                            letter-spacing: 1.5px;
+                                                            color: #6b7280;
+                                                            margin-bottom: 10px;
                                                         "
                                                     >
-                                                        Restablecer contraseña
-                                                    </a>
+                                                        Código de verificación
+                                                    </div>
+
+                                                    <div
+                                                        th:text="${codigo}"
+                                                        style="
+                                                            font-size: 36px;
+                                                            line-height: 44px;
+                                                            font-weight: bold;
+                                                            letter-spacing: 8px;
+                                                            color: #0f766e;
+                                                        "
+                                                    >
+                                                        000000
+                                                    </div>
+
                                                 </td>
                                             </tr>
                                         </table>
@@ -238,48 +240,26 @@
                                 </tr>
                             </table>
 
-                            <!-- Información del enlace -->
+                            <!-- Expiración -->
                             <p
                                 style="
-                                    margin: 26px 0 0 0;
+                                    margin: 22px 0 0 0;
                                     text-align: center;
-                                    font-size: 13px;
+                                    font-size: 14px;
                                     line-height: 1.6;
-                                    color: #6b7280;
+                                    color: #4b5563;
                                 "
                             >
-                                Por seguridad, este enlace es de uso personal
-                                y estará disponible por tiempo limitado.
+                                Este código es válido durante
+                                <strong style="color: #111827;">
+                                    5 minutos
+                                </strong>.
                             </p>
 
-                            <!-- Seguridad -->
+                            <!-- Cuenta activada -->
                             <div
                                 style="
                                     margin-top: 28px;
-                                    padding: 16px;
-                                    background-color: #fff7ed;
-                                    border-left: 4px solid #f59e0b;
-                                    border-radius: 6px;
-                                "
-                            >
-                                <p
-                                    style="
-                                        margin: 0;
-                                        font-size: 13px;
-                                        line-height: 1.6;
-                                        color: #6b7280;
-                                    "
-                                >
-                                    Si no solicitaste restablecer tu contraseña,
-                                    puedes ignorar este correo de forma segura.
-                                    Tu contraseña actual no será modificada.
-                                </p>
-                            </div>
-
-                            <!-- Recomendación -->
-                            <div
-                                style="
-                                    margin-top: 18px;
                                     padding: 16px;
                                     background-color: #f0fdf4;
                                     border-left: 4px solid #10b981;
@@ -294,46 +274,36 @@
                                         color: #4b5563;
                                     "
                                 >
-                                    El equipo de NeoDent nunca te solicitará tu contraseña
-                                    por correo, teléfono o mensaje.
+                                    Una vez verificado tu correo,
+                                    tu cuenta quedará activada y podrás acceder
+                                    a las funcionalidades disponibles en NeoDent.
                                 </p>
                             </div>
 
-                            <!-- URL alternativa -->
-                            <p
+                            <!-- Seguridad -->
+                            <div
                                 style="
-                                    margin: 24px 0 0 0;
-                                    font-size: 12px;
-                                    line-height: 1.6;
-                                    color: #9ca3af;
-                                    text-align: center;
+                                    margin-top: 18px;
+                                    padding: 16px;
+                                    background-color: #fff7ed;
+                                    border-left: 4px solid #f59e0b;
+                                    border-radius: 6px;
                                 "
                             >
-                                Si el botón no funciona, copia y pega el siguiente enlace
-                                en tu navegador:
-                            </p>
-
-                            <p
-                                style="
-                                    margin: 8px 0 0 0;
-                                    font-size: 12px;
-                                    line-height: 1.6;
-                                    text-align: center;
-                                    word-break: break-all;
-                                "
-                            >
-                                <a
-                                    th:href="${resetUrl}"
-                                    th:text="${resetUrl}"
-                                    href="#"
+                                <p
                                     style="
-                                        color: #0f766e;
-                                        text-decoration: underline;
+                                        margin: 0;
+                                        font-size: 13px;
+                                        line-height: 1.6;
+                                        color: #6b7280;
                                     "
                                 >
-                                    https://neodent.com/reset-password
-                                </a>
-                            </p>
+                                    Si no creaste una cuenta en
+                                    <strong>NeoDent</strong>,
+                                    puedes ignorar este correo de forma segura.
+                                    No compartas este código con ninguna persona.
+                                </p>
+                            </div>
 
                         </td>
                     </tr>
