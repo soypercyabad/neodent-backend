@@ -16,7 +16,11 @@ public interface TokenAccionRepository
         String tipo
     );
 
-    @EntityGraph(attributePaths = "paciente")
+    @EntityGraph(attributePaths = {
+        "paciente",
+        "paciente.tipoDocumento",
+        "paciente.usuario"
+    })
     Optional<TokenAccion>
     findByTokenHashAndTipoAndUsadoFalseAndRevocadoFalse(
         String tokenHash,

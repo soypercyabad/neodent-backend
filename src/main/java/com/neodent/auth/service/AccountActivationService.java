@@ -62,6 +62,7 @@ public class AccountActivationService {
     }
 
 
+    @Transactional
     public StartAccountActivationResponse iniciar(
         StartAccountActivationRequest request,
         String ip
@@ -80,6 +81,29 @@ public class AccountActivationService {
                     request.token()
                 );
 
+        String tipoDocumento =
+            request.tipoDocumento()
+                .trim()
+                .toUpperCase();
+
+        String numeroDocumento =
+            request.numeroDocumento()
+                .trim();
+
+        boolean documentoCoincide =
+            paciente.getTipoDocumento()
+                .getCodigo()
+                .equalsIgnoreCase(tipoDocumento)
+            &&
+            paciente.getNumeroDocumento()
+                .equals(numeroDocumento);
+
+        if (!documentoCoincide) {
+            throw new UnauthorizedException(
+                "Los datos de identidad no coinciden"
+            );
+        }
+
         OtpService.OtpGenerado otp =
             otpService
                 .generarAccountActivationOtp(
@@ -88,6 +112,9 @@ public class AccountActivationService {
 
         return new StartAccountActivationResponse(
             otp.id(),
+            enmascararEmail(
+                paciente.getEmail()
+            ),
             "Se envió un código para continuar con la activación"
         );
     }

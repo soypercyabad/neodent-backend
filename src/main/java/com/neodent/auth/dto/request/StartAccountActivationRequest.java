@@ -8,6 +8,12 @@ public record StartAccountActivationRequest(
     String token,
 
     @NotBlank
+    String tipoDocumento,
+
+    @NotBlank
+    String numeroDocumento,
+
+    @NotBlank
     String turnstileToken
 
 ) {}

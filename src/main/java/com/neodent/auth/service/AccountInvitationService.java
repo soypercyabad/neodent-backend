@@ -3,8 +3,10 @@ package com.neodent.auth.service;
 import com.neodent.auth.model.TokenAccion;
 import com.neodent.auth.repository.TokenAccionRepository;
 import com.neodent.paciente.model.Paciente;
+import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
+import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.shared.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +29,7 @@ public class AccountInvitationService {
     private static final int EXPIRACION_HORAS = 24;
     private final TokenAccionRepository repository;
     private final SecureRandom random = new SecureRandom();
+    private final PacienteRepository pacienteRepository;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -221,5 +224,22 @@ public class AccountInvitationService {
         );
 
         repository.save(invitacion);
+    }
+
+
+    @Transactional
+    public AccountInvitation generar(
+        Long pacienteId
+    ) {
+
+        Paciente paciente =
+            pacienteRepository.findById(pacienteId)
+                .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                        "Paciente no encontrado"
+                    )
+                );
+
+        return generar(paciente);
     }
 }
