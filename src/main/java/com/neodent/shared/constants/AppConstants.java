@@ -34,6 +34,7 @@ public final class AppConstants {
     public static final class TiposOtp {
         public static final String LOGIN_2FA = "LOGIN_2FA";
         public static final String EMAIL_VERIFICATION = "EMAIL_VERIFICATION";
+        public static final String ACCOUNT_ACTIVATION = "ACCOUNT_ACTIVATION";
 
         private TiposOtp() {}
     }
@@ -50,6 +51,7 @@ public final class AppConstants {
         public static final String EMAIL_VERIFICATION = "email-verification";
         public static final String CITA_CONFIRMADA = "cita-confirmada";
         public static final String PASSWORD_RESET = "password-reset";
+        public static final String ACCOUNT_ACTIVATION_OTP = "account-activation-otp";
 
         private PlantillasEmail() {}
     }

@@ -23,15 +23,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountInvitationService {
 
-    private static final String TIPO =
-        AppConstants.TiposTokenAccion.ACCOUNT_INVITATION;
-
+    private static final String TIPO =  AppConstants.TiposTokenAccion.ACCOUNT_INVITATION;
     private static final int EXPIRACION_HORAS = 24;
-
     private final TokenAccionRepository repository;
-
-    private final SecureRandom random =
-        new SecureRandom();
+    private final SecureRandom random = new SecureRandom();
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -199,5 +194,32 @@ public class AccountInvitationService {
                 ex
             );
         }
+    }
+
+
+    @Transactional
+    public void marcarComoUsada(
+        String token
+    ) {
+
+        TokenAccion invitacion =
+            repository
+                .findByTokenHashAndTipoAndUsadoFalseAndRevocadoFalse(
+                    hashToken(token),
+                    AppConstants.TiposTokenAccion.ACCOUNT_INVITATION
+                )
+                .orElseThrow(() ->
+                    new UnauthorizedException(
+                        "La invitación no es válida"
+                    )
+                );
+
+        invitacion.setUsado(true);
+
+        invitacion.setUsedAt(
+            LocalDateTime.now()
+        );
+
+        repository.save(invitacion);
     }
 }

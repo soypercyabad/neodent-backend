@@ -20,4 +20,7 @@ public interface CodigoVerificacionRepository
     Optional<CodigoVerificacion> findById(Long id);
 
     List<CodigoVerificacion> findAllByUsuarioIdAndTipoAndUsadoFalse(Long usuarioId, String tipo);
+
+    @EntityGraph(attributePaths = "paciente")
+    Optional<CodigoVerificacion> findByIdAndTipoAndPacienteIsNotNull(Long id, String tipo);
 }

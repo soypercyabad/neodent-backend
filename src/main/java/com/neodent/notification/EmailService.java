@@ -18,4 +18,9 @@ public interface EmailService {
         String destinatario,
         CitaConfirmadaEmailData data
     );
+
+    void enviarOtpActivacionCuenta(
+        String destinatario,
+        String codigo
+    );
 }

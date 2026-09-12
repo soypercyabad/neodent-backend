@@ -1,5 +1,6 @@
 package com.neodent.auth.model;
 
+import com.neodent.paciente.model.Paciente;
 import com.neodent.usuario.model.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -47,4 +48,8 @@ public class CodigoVerificacion {
 
     @Column(name = "last_resend_at")
     private LocalDateTime lastResendAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_paciente")
+    private Paciente paciente;
 }

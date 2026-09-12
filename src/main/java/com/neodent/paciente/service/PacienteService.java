@@ -10,6 +10,7 @@ import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.paciente.repository.TipoDocumentoRepository;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
+import com.neodent.shared.util.NameFormatter;
 import com.neodent.usuario.model.Usuario;
 
 import lombok.RequiredArgsConstructor;
@@ -81,14 +82,13 @@ public class PacienteService {
                     )
                 );
 
-        boolean existeDocumento =
+        if (
             pacienteRepository
                 .existsByTipoDocumentoCodigoAndNumeroDocumento(
                     codigoDocumento,
                     numeroDocumento
-                );
-
-        if (existeDocumento) {
+                )
+        ) {
             throw new ConflictException(
                 "Ya existe un paciente registrado con este documento"
             );
@@ -110,26 +110,47 @@ public class PacienteService {
             null
         );
 
-        Paciente paciente = new Paciente();
+        Paciente paciente =
+            new Paciente();
 
-        paciente.setTipoDocumento(tipoDocumento);
-        paciente.setNumeroDocumento(numeroDocumento);
+        paciente.setTipoDocumento(
+            tipoDocumento
+        );
+
+        paciente.setNumeroDocumento(
+            numeroDocumento
+        );
+
         paciente.setNombres(
-            request.nombres().trim()
+            NameFormatter.format(
+                request.nombres()
+            )
         );
+
         paciente.setApellidoPaterno(
-            request.apellidoPaterno().trim()
+            NameFormatter.format(
+                request.apellidoPaterno()
+            )
         );
+
         paciente.setApellidoMaterno(
-            normalizarTextoOpcional(
+            NameFormatter.format(
                 request.apellidoMaterno()
             )
         );
+
         paciente.setFechaNacimiento(
             request.fechaNacimiento()
         );
-        paciente.setTelefono(telefono);
-        paciente.setEmail(email);
+
+        paciente.setTelefono(
+            telefono
+        );
+
+        paciente.setEmail(
+            email
+        );
+
         paciente.setDireccion(
             normalizarTextoOpcional(
                 request.direccion()
@@ -140,7 +161,9 @@ public class PacienteService {
         paciente.setActivo(true);
 
         Paciente guardado =
-            pacienteRepository.save(paciente);
+            pacienteRepository.save(
+                paciente
+            );
 
         return pacienteMapper.toResponse(
             guardado
@@ -180,15 +203,19 @@ public class PacienteService {
         );
 
         paciente.setNombres(
-            request.nombres().trim()
+            NameFormatter.format(
+                request.nombres()
+            )
         );
 
         paciente.setApellidoPaterno(
-            request.apellidoPaterno().trim()
+            NameFormatter.format(
+                request.apellidoPaterno()
+            )
         );
 
         paciente.setApellidoMaterno(
-            normalizarTextoOpcional(
+            NameFormatter.format(
                 request.apellidoMaterno()
             )
         );
@@ -197,8 +224,13 @@ public class PacienteService {
             request.fechaNacimiento()
         );
 
-        paciente.setTelefono(telefono);
-        paciente.setEmail(email);
+        paciente.setTelefono(
+            telefono
+        );
+
+        paciente.setEmail(
+            email
+        );
 
         paciente.setDireccion(
             normalizarTextoOpcional(
@@ -207,7 +239,9 @@ public class PacienteService {
         );
 
         Paciente actualizado =
-            pacienteRepository.save(paciente);
+            pacienteRepository.save(
+                paciente
+            );
 
         return pacienteMapper.toResponse(
             actualizado
@@ -229,7 +263,9 @@ public class PacienteService {
 
         paciente.setActivo(true);
 
-        pacienteRepository.save(paciente);
+        pacienteRepository.save(
+            paciente
+        );
     }
 
 
@@ -247,7 +283,9 @@ public class PacienteService {
 
         paciente.setActivo(false);
 
-        pacienteRepository.save(paciente);
+        pacienteRepository.save(
+            paciente
+        );
     }
 
 
@@ -263,7 +301,8 @@ public class PacienteService {
                 .toUpperCase();
 
         String numeroDocumento =
-            request.numeroDocumento().trim();
+            request.numeroDocumento()
+                .trim();
 
         TipoDocumento tipoDocumento =
             tipoDocumentoRepository
@@ -304,36 +343,62 @@ public class PacienteService {
             null
         );
 
-        Paciente paciente = new Paciente();
+        Paciente paciente =
+            new Paciente();
 
-        paciente.setTipoDocumento(tipoDocumento);
-        paciente.setNumeroDocumento(numeroDocumento);
+        paciente.setTipoDocumento(
+            tipoDocumento
+        );
+
+        paciente.setNumeroDocumento(
+            numeroDocumento
+        );
+
         paciente.setNombres(
-            request.nombres().trim()
+            NameFormatter.format(
+                request.nombres()
+            )
         );
+
         paciente.setApellidoPaterno(
-            request.apellidoPaterno().trim()
+            NameFormatter.format(
+                request.apellidoPaterno()
+            )
         );
+
         paciente.setApellidoMaterno(
-            normalizarTextoOpcional(
+            NameFormatter.format(
                 request.apellidoMaterno()
             )
         );
+
         paciente.setFechaNacimiento(
             request.fechaNacimiento()
         );
-        paciente.setTelefono(telefono);
-        paciente.setEmail(email);
+
+        paciente.setTelefono(
+            telefono
+        );
+
+        paciente.setEmail(
+            email
+        );
+
         paciente.setDireccion(
             normalizarTextoOpcional(
                 request.direccion()
             )
         );
 
-        paciente.setUsuario(usuario);
+        paciente.setUsuario(
+            usuario
+        );
+
         paciente.setActivo(true);
 
-        return pacienteRepository.save(paciente);
+        return pacienteRepository.save(
+            paciente
+        );
     }
 
 
@@ -362,7 +427,9 @@ public class PacienteService {
             boolean existeEmail =
                 pacienteId == null
                     ? pacienteRepository
-                        .existsByEmailIgnoreCase(email)
+                        .existsByEmailIgnoreCase(
+                            email
+                        )
                     : pacienteRepository
                         .existsByEmailIgnoreCaseAndIdNot(
                             email,
@@ -381,7 +448,9 @@ public class PacienteService {
             boolean existeTelefono =
                 pacienteId == null
                     ? pacienteRepository
-                        .existsByTelefono(telefono)
+                        .existsByTelefono(
+                            telefono
+                        )
                     : pacienteRepository
                         .existsByTelefonoAndIdNot(
                             telefono,
@@ -401,7 +470,10 @@ public class PacienteService {
         String valor
     ) {
 
-        if (valor == null || valor.isBlank()) {
+        if (
+            valor == null ||
+            valor.isBlank()
+        ) {
             return null;
         }
 
@@ -413,7 +485,10 @@ public class PacienteService {
         String email
     ) {
 
-        if (email == null || email.isBlank()) {
+        if (
+            email == null ||
+            email.isBlank()
+        ) {
             return null;
         }
 

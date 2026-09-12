@@ -1,19 +1,26 @@
 package com.neodent.auth.controller;
 
+import com.neodent.auth.dto.request.CompleteAccountActivationRequest;
 import com.neodent.auth.dto.request.LoginRequest;
 import com.neodent.auth.dto.request.PatientRegistrationCheckRequest;
 import com.neodent.auth.dto.request.PatientRegistrationRequest;
 import com.neodent.auth.dto.request.ResendCodeRequest;
 import com.neodent.auth.dto.request.RestartEmailVerificationRequest;
+import com.neodent.auth.dto.request.StartAccountActivationRequest;
+import com.neodent.auth.dto.request.ValidateAccountInvitationRequest;
 import com.neodent.auth.dto.request.VerifyEmailRequest;
 import com.neodent.auth.dto.request.VerifyTwoFactorRequest;
+import com.neodent.auth.dto.response.AccountInvitationResponse;
+import com.neodent.auth.dto.response.CompleteAccountActivationResponse;
 import com.neodent.auth.dto.response.LoginResponse;
 import com.neodent.auth.dto.response.PatientRegistrationCheckResponse;
 import com.neodent.auth.dto.response.PatientRegistrationResponse;
 import com.neodent.auth.dto.response.ResendCodeResponse;
 import com.neodent.auth.dto.response.RestartEmailVerificationResponse;
+import com.neodent.auth.dto.response.StartAccountActivationResponse;
 import com.neodent.auth.dto.response.VerifyEmailResponse;
 import com.neodent.auth.dto.response.VerifyTwoFactorResponse;
+import com.neodent.auth.service.AccountActivationService;
 import com.neodent.auth.service.AuthService;
 import com.neodent.auth.service.OtpService;
 import com.neodent.auth.service.PatientRegistrationService;
@@ -41,6 +48,7 @@ public class AuthController {
     private final AuthService authService;
     private final PatientRegistrationService patientRegistrationService;
     private final OtpService otpService;
+    private final AccountActivationService accountActivationService;
 
 
     @Operation(
@@ -359,5 +367,140 @@ public class AuthController {
                 request,
                 ip
             );
+    }
+
+
+    @Operation(
+        summary = "Validar invitación de cuenta",
+        description = """
+            Valida el enlace de activación enviado
+            a un paciente registrado por recepción.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Invitación válida"
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Invitación inválida o expirada"
+        ),
+        @ApiResponse(
+            responseCode = "409",
+            description = "El paciente ya tiene cuenta"
+        )
+    })
+    @PostMapping(
+        "/account-activation/validate"
+    )
+    public AccountInvitationResponse
+    validarInvitacion(
+        @Valid
+        @RequestBody
+        ValidateAccountInvitationRequest request
+    ) {
+
+        return accountActivationService
+            .validar(
+                request.token()
+            );
+    }
+
+
+    @Operation(
+        summary = "Iniciar activación de cuenta",
+        description = """
+            Valida el token de invitación y el captcha Turnstile.
+            Si son válidos, genera y envía un código OTP al correo
+            del paciente para continuar con la activación de su cuenta.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Código de activación enviado exitosamente"
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Datos inválidos (token o captcha faltante)"
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Token de invitación inválido o expirado"
+        ),
+        @ApiResponse(
+            responseCode = "403",
+            description = "Verificación Turnstile inválida"
+        ),
+        @ApiResponse(
+            responseCode = "409",
+            description = "El paciente ya cuenta con un usuario activo"
+        ),
+        @ApiResponse(
+            responseCode = "429",
+            description = "Demasiadas solicitudes"
+        )
+    })
+    @PostMapping(
+        "/account-activation/start"
+    )
+    public StartAccountActivationResponse
+    iniciarActivacion(
+        @Valid
+        @RequestBody
+        StartAccountActivationRequest request,
+        HttpServletRequest httpRequest
+    ) {
+
+        String ip =
+            obtenerIpCliente(httpRequest);
+
+        return accountActivationService
+            .iniciar(
+                request,
+                ip
+            );
+    }
+
+
+    @Operation(
+        summary = "Completar activación de cuenta",
+        description = """
+            Valida la invitación y el código OTP,
+            crea la cuenta del paciente y la vincula
+            con su registro existente.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description = "Cuenta activada"
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Datos inválidos"
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Token u OTP inválido"
+        ),
+        @ApiResponse(
+            responseCode = "409",
+            description = "El paciente ya tiene cuenta"
+        )
+    })
+    @PostMapping(
+        "/account-activation/complete"
+    )
+    public CompleteAccountActivationResponse
+    completarActivacion(
+        @Valid
+        @RequestBody
+        CompleteAccountActivationRequest request
+    ) {
+
+        return accountActivationService
+            .completar(request);
     }
 }

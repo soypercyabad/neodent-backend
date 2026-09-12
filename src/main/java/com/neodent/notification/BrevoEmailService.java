@@ -71,6 +71,25 @@ public class BrevoEmailService implements EmailService {
     }
 
 
+    @Override
+    public void enviarOtpActivacionCuenta(
+        String destinatario,
+        String codigo
+    ) {
+
+        String html = renderTemplate(
+            AppConstants.PlantillasEmail.ACCOUNT_ACTIVATION_OTP,
+            codigo
+        );
+
+        enviar(
+            destinatario,
+            "Activa tu cuenta - NeoDent",
+            html
+        );
+    }
+
+
     private String renderTemplate(
         String template,
         String codigo

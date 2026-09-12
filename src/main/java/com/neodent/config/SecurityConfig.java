@@ -8,12 +8,12 @@ import javax.crypto.spec.SecretKeySpec;
 
 import com.neodent.shared.constants.AppConstants;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -22,28 +22,35 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class SecurityConfig {
 
-    
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, 
-        JwtAuthenticationConverter jwtConverter) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+        HttpSecurity http,
+        JwtAuthenticationConverter jwtConverter
+    ) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
-
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .cors(cors -> {})
+            .csrf(csrf ->
+                csrf.disable()
             )
 
-            // Swagger
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
+                )
+            )
+
             .authorizeHttpRequests(auth -> auth
+
                 .requestMatchers(
                     "/api/health/**",
                     "/api-docs/**",
@@ -51,12 +58,10 @@ public class SecurityConfig {
                     "/swagger-ui.html"
                 ).permitAll()
 
-                // Autenticación y registro público
                 .requestMatchers(
                     "/api/auth/**"
                 ).permitAll()
 
-                // Administración de pacientes
                 .requestMatchers(
                     "/api/pacientes/**"
                 ).hasAnyRole(
@@ -64,7 +69,6 @@ public class SecurityConfig {
                     AppConstants.Roles.RECEPCIONISTA
                 )
 
-                // Consulta DNI externa
                 .requestMatchers(
                     "/api/dni/**"
                 ).hasAnyRole(
@@ -83,8 +87,13 @@ public class SecurityConfig {
                 )
             )
 
-            .formLogin(form -> form.disable())
-            .httpBasic(basic -> basic.disable());
+            .formLogin(form ->
+                form.disable()
+            )
+
+            .httpBasic(basic ->
+                basic.disable()
+            );
 
         return http.build();
     }
@@ -99,10 +108,13 @@ public class SecurityConfig {
     @Bean
     public JwtEncoder jwtEncoder() {
 
-        SecretKey key = new SecretKeySpec(
-            jwtSecret.getBytes(StandardCharsets.UTF_8),
-            "HmacSHA256"
-        );
+        SecretKey key =
+            new SecretKeySpec(
+                jwtSecret.getBytes(
+                    StandardCharsets.UTF_8
+                ),
+                "HmacSHA256"
+            );
 
         return NimbusJwtEncoder
             .withSecretKey(key)
@@ -114,10 +126,13 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder() {
 
-        SecretKey key = new SecretKeySpec(
-            jwtSecret.getBytes(StandardCharsets.UTF_8),
-            "HmacSHA256"
-        );
+        SecretKey key =
+            new SecretKeySpec(
+                jwtSecret.getBytes(
+                    StandardCharsets.UTF_8
+                ),
+                "HmacSHA256"
+            );
 
         return NimbusJwtDecoder
             .withSecretKey(key)
@@ -127,23 +142,30 @@ public class SecurityConfig {
 
 
     @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+    public JwtAuthenticationConverter
+    jwtAuthenticationConverter() {
 
         JwtAuthenticationConverter converter =
             new JwtAuthenticationConverter();
 
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+        converter.setJwtGrantedAuthoritiesConverter(
+            jwt -> {
 
-            String role = jwt.getClaimAsString("role");
+                String role =
+                    jwt.getClaimAsString("role");
 
-            if (role == null) {
-                return List.of();
+                if (role == null) {
+                    return List.of();
+                }
+
+                return List.of(
+                    new SimpleGrantedAuthority(
+                        AppConstants.Roles.PREFIX
+                            + role
+                    )
+                );
             }
-
-            return List.of(
-                new SimpleGrantedAuthority(AppConstants.Roles.PREFIX + role)
-            );
-        });
+        );
 
         return converter;
     }
