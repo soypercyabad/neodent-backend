@@ -13,7 +13,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TurnstileService {
 
-    private final RestClient.Builder restClientBuilder;
+    private final RestClient restClient;
 
     @Value("${turnstile.secret}")
     private String secret;
@@ -21,33 +21,20 @@ public class TurnstileService {
     @Value("${turnstile.verify-url}")
     private String verifyUrl;
 
+    public void validar(String token, String ip) {
+        TurnstileResponse response = restClient
+            .post()
+            .uri(verifyUrl)
+            .body(Map.of(
+                "secret", secret,
+                "response", token,
+                "remoteip", ip
+            ))
+            .retrieve()
+            .body(TurnstileResponse.class);
 
-    public void validar(
-        String token,
-        String ip
-    ) {
-
-        TurnstileResponse response =
-            restClientBuilder.build()
-                .post()
-                .uri(verifyUrl)
-                .body(
-                    Map.of(
-                        "secret", secret,
-                        "response", token,
-                        "remoteip", ip
-                    )
-                )
-                .retrieve()
-                .body(TurnstileResponse.class);
-
-        if (
-            response == null ||
-            !response.success()
-        ) {
-            throw new ForbiddenException(
-                "No se pudo validar la verificación de seguridad"
-            );
+        if (response == null || !response.success()) {
+            throw new ForbiddenException("No se pudo validar la verificación de seguridad");
         }
     }
 }

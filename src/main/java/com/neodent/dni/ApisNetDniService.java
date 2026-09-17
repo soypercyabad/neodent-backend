@@ -24,90 +24,53 @@ public class ApisNetDniService implements DniService {
     ) {
         this.restClient = restClientBuilder
             .baseUrl(baseUrl)
-            .defaultHeader(
-                "Authorization",
-                "Bearer " + token
-            )
+            .defaultHeader("Authorization", "Bearer " + token)
             .build();
     }
 
     @Override
     public DniResponse buscarPorDni(String dni) {
-
         validarDni(dni);
 
         try {
-
             ApisNetDniResponse response = restClient
                 .get()
-                .uri(uriBuilder ->
-                    uriBuilder
-                        .path("/v2/reniec/dni")
-                        .queryParam("numero", dni)
-                        .build()
-                )
+                .uri(uriBuilder -> uriBuilder.path("/v2/reniec/dni").queryParam("numero", dni).build())
                 .retrieve()
                 .body(ApisNetDniResponse.class);
 
             if (response == null) {
-                throw new BusinessException(
-                    "No se obtuvo información para el DNI consultado"
-                );
+                throw new BusinessException("No se obtuvo información para el DNI consultado");
             }
 
-            return new DniResponse(
-                dni,
-                response.nombres(),
-                response.apellidoPaterno(),
-                response.apellidoMaterno()
-            );
+            return new DniResponse(dni, response.nombres(), response.apellidoPaterno(), response.apellidoMaterno());
 
         } catch (RestClientResponseException ex) {
-
             HttpStatusCode status = ex.getStatusCode();
 
             if (status.value() == 404) {
-                throw new BusinessException(
-                    "No se encontraron datos para el DNI ingresado"
-                );
+                throw new BusinessException("No se encontraron datos para el DNI ingresado");
             }
-
             if (status.value() == 401 || status.value() == 403) {
-                throw new BusinessException(
-                    "El servicio de consulta DNI no está autorizado"
-                );
+                throw new BusinessException("El servicio de consulta DNI no está autorizado");
             }
-
             if (status.value() == 429) {
-                throw new BusinessException(
-                    "Se alcanzó temporalmente el límite de consultas DNI"
-                );
+                throw new BusinessException("Se alcanzó temporalmente el límite de consultas DNI");
             }
-
             if (status.is5xxServerError()) {
-                throw new BusinessException(
-                    "El servicio de consulta DNI no está disponible temporalmente"
-                );
+                throw new BusinessException("El servicio de consulta DNI no está disponible temporalmente");
             }
 
-            throw new BusinessException(
-                "No se pudo consultar el DNI"
-            );
+            throw new BusinessException("No se pudo consultar el DNI");
 
         } catch (ResourceAccessException ex) {
-
-            throw new BusinessException(
-                "No fue posible conectarse con el servicio de consulta DNI"
-            );
+            throw new BusinessException("No fue posible conectarse con el servicio de consulta DNI");
         }
     }
 
     private void validarDni(String dni) {
-
         if (dni == null || !dni.matches("\\d{8}")) {
-            throw new BusinessException(
-                "El DNI debe contener exactamente 8 dígitos"
-            );
+            throw new BusinessException("El DNI debe contener exactamente 8 dígitos");
         }
     }
 }

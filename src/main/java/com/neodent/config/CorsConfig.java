@@ -16,43 +16,15 @@ public class CorsConfig {
     private String frontendUrl;
 
     @Bean
-    public CorsConfigurationSource
-    corsConfigurationSource() {
-
-        CorsConfiguration config =
-            new CorsConfiguration();
-
-        config.setAllowedOrigins(
-            List.of(frontendUrl)
-        );
-
-        config.setAllowedMethods(
-            List.of(
-                "GET",
-                "POST",
-                "PUT",
-                "PATCH",
-                "DELETE",
-                "OPTIONS"
-            )
-        );
-
-        config.setAllowedHeaders(
-            List.of(
-                "Authorization",
-                "Content-Type"
-            )
-        );
-
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(frontendUrl));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source =
-            new UrlBasedCorsConfigurationSource();
-
-        source.registerCorsConfiguration(
-            "/**",
-            config
-        );
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
 
         return source;
     }

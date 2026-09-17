@@ -23,9 +23,7 @@ import com.neodent.usuario.model.Usuario;
 import com.neodent.usuario.repository.EstadoUsuarioRepository;
 import com.neodent.usuario.repository.RolRepository;
 import com.neodent.usuario.repository.UsuarioRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,43 +43,22 @@ public class PatientRegistrationService {
     private final PacienteService pacienteService;
     private final OtpService otpService;
 
-
-    public PatientRegistrationCheckResponse verificarDni(
-        String dni,
-        String turnstileToken,
-        String ip
-    ) {
-
-        String numeroDocumento =
-            dni.trim();
-
+    public PatientRegistrationCheckResponse verificarDni(String dni, String turnstileToken, String ip) {
+        String numeroDocumento = dni.trim();
         rateLimitService.validar(ip);
+        turnstileService.validar(turnstileToken, ip);
 
-        turnstileService.validar(
-            turnstileToken,
-            ip
+        boolean existe = pacienteRepository.existsByTipoDocumentoCodigoAndNumeroDocumento(
+            AppConstants.TiposDocumento.DNI,
+            numeroDocumento
         );
 
-        boolean existe =
-            pacienteRepository
-                .existsByTipoDocumentoCodigoAndNumeroDocumento(
-                    AppConstants.TiposDocumento.DNI,
-                    numeroDocumento
-                );
-
         if (existe) {
-            throw new ConflictException(
-                "Ya existe un paciente registrado con este DNI"
-            );
+            throw new ConflictException("Ya existe un paciente registrado con este DNI");
         }
 
         try {
-
-            DniResponse response =
-                dniService.buscarPorDni(
-                    numeroDocumento
-                );
-
+            DniResponse response = dniService.buscarPorDni(numeroDocumento);
             return new PatientRegistrationCheckResponse(
                 response.dni(),
                 response.nombres(),
@@ -89,109 +66,53 @@ public class PatientRegistrationService {
                 response.apellidoMaterno(),
                 false
             );
-
         } catch (BusinessException ex) {
-
-            return new PatientRegistrationCheckResponse(
-                numeroDocumento,
-                null,
-                null,
-                null,
-                true
-            );
+            return new PatientRegistrationCheckResponse(numeroDocumento, null, null, null, true);
         }
     }
 
-
     @Transactional
-    public PatientRegistrationResponse registrar(
-        PatientRegistrationRequest request,
-        String ip
-    ) {
-
+    public PatientRegistrationResponse registrar(PatientRegistrationRequest request, String ip) {
         rateLimitService.validar(ip);
+        turnstileService.validar(request.turnstileToken(), ip);
 
-        turnstileService.validar(
-            request.turnstileToken(),
-            ip
-        );
+        String email = request.email().trim().toLowerCase();
 
-        String email =
-            request.email()
-                .trim()
-                .toLowerCase();
-
-        if (
-            usuarioRepository
-                .existsByEmailIgnoreCase(email)
-        ) {
-            throw new ConflictException(
-                "Ya existe una cuenta registrada con este correo"
-            );
+        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
+            throw new ConflictException("Ya existe una cuenta registrada con este correo");
         }
 
-        Rol rolPaciente =
-            rolRepository
-                .findByNombreAndActivoTrue(
-                    AppConstants.Roles.PACIENTE
-                )
-                .orElseThrow(() ->
-                    new IllegalStateException(
-                        "Rol PACIENTE no configurado"
-                    )
-                );
+        Rol rolPaciente = rolRepository.findByNombreAndActivoTrue(AppConstants.Roles.PACIENTE)
+            .orElseThrow(() -> new IllegalStateException("Rol PACIENTE no configurado"));
 
-        EstadoUsuario pendiente =
-            estadoUsuarioRepository
-                .findByNombreAndActivoTrue(
-                    AppConstants.EstadosUsuario.PENDIENTE
-                )
-                .orElseThrow(() ->
-                    new IllegalStateException(
-                        "Estado PENDIENTE no configurado"
-                    )
-                );
+        EstadoUsuario pendiente = estadoUsuarioRepository.findByNombreAndActivoTrue(AppConstants.EstadosUsuario.PENDIENTE)
+            .orElseThrow(() -> new IllegalStateException("Estado PENDIENTE no configurado"));
 
         Usuario usuario = new Usuario();
-
         usuario.setUsername(null);
         usuario.setEmail(email);
-        usuario.setPasswordHash(
-            passwordEncoder.encode(
-                request.password()
-            )
-        );
+        usuario.setPasswordHash(passwordEncoder.encode(request.password()));
         usuario.setRol(rolPaciente);
         usuario.setEstado(pendiente);
         usuario.setTwoFactorEnabled(true);
         usuario.setEmailVerificado(false);
 
-        Usuario usuarioGuardado =
-            usuarioRepository.save(usuario);
+        Usuario usuarioGuardado = usuarioRepository.save(usuario);
 
-        CrearPacienteRequest pacienteRequest =
-            new CrearPacienteRequest(
-                AppConstants.TiposDocumento.DNI,
-                request.dni(),
-                request.nombres(),
-                request.apellidoPaterno(),
-                request.apellidoMaterno(),
-                request.fechaNacimiento(),
-                request.telefono(),
-                email,
-                request.direccion()
-            );
+        CrearPacienteRequest pacienteRequest = new CrearPacienteRequest(
+            AppConstants.TiposDocumento.DNI,
+            request.dni(),
+            request.nombres(),
+            request.apellidoPaterno(),
+            request.apellidoMaterno(),
+            request.fechaNacimiento(),
+            request.telefono(),
+            email,
+            request.direccion()
+        );
 
-        Paciente paciente =
-            pacienteService.crearConUsuario(
-                pacienteRequest,
-                usuarioGuardado
-            );
-
-        OtpService.OtpGenerado otp =
-            otpService.generarEmailVerification(
-                usuarioGuardado
-            );
+        Paciente paciente = pacienteService.crearConUsuario(pacienteRequest, usuarioGuardado);
+        OtpService.OtpGenerado otp = otpService.generarEmailVerification(usuarioGuardado);
 
         return new PatientRegistrationResponse(
             paciente.getId(),
@@ -201,114 +122,47 @@ public class PatientRegistrationService {
         );
     }
 
-
     @Transactional
-    public VerifyEmailResponse verificarEmail(
-        VerifyEmailRequest request
-    ) {
+    public VerifyEmailResponse verificarEmail(VerifyEmailRequest request) {
+        Usuario usuario = otpService.verificarEmailOtp(request.challengeId(), request.codigo());
 
-        Usuario usuario =
-            otpService.verificarEmailOtp(
-                request.challengeId(),
-                request.codigo()
-            );
-
-        if (Boolean.TRUE.equals(
-            usuario.getEmailVerificado()
-        )) {
-            throw new ConflictException(
-                "El correo electrónico ya fue verificado"
-            );
+        if (Boolean.TRUE.equals(usuario.getEmailVerificado())) {
+            throw new ConflictException("El correo electrónico ya fue verificado");
         }
 
-        EstadoUsuario activo =
-            estadoUsuarioRepository
-                .findByNombreAndActivoTrue(AppConstants.EstadosUsuario.ACTIVO)
-                .orElseThrow(() ->
-                    new IllegalStateException(
-                        "Estado ACTIVO no configurado"
-                    )
-                );
+        EstadoUsuario activo = estadoUsuarioRepository.findByNombreAndActivoTrue(AppConstants.EstadosUsuario.ACTIVO)
+            .orElseThrow(() -> new IllegalStateException("Estado ACTIVO no configurado"));
 
         usuario.setEmailVerificado(true);
         usuario.setEstado(activo);
-
         usuarioRepository.save(usuario);
 
-        return new VerifyEmailResponse(
-            true,
-            "Correo verificado. La cuenta ya se encuentra activa."
-        );
+        return new VerifyEmailResponse(true, "Correo verificado. La cuenta ya se encuentra activa.");
     }
 
     @Transactional
-    public RestartEmailVerificationResponse
-    reiniciarVerificacionEmail(
-        RestartEmailVerificationRequest request,
-        String ip
-    ) {
-
+    public RestartEmailVerificationResponse reiniciarVerificacionEmail(RestartEmailVerificationRequest request, String ip) {
         rateLimitService.validar(ip);
+        turnstileService.validar(request.turnstileToken(), ip);
 
-        turnstileService.validar(
-            request.turnstileToken(),
-            ip
-        );
+        String email = request.email().trim().toLowerCase();
 
-        String email =
-            request.email()
-                .trim()
-                .toLowerCase();
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
+            .orElseThrow(() -> new UnauthorizedException("Correo o contraseña incorrectos"));
 
-        Usuario usuario =
-            usuarioRepository
-                .findByEmailIgnoreCase(email)
-                .orElseThrow(() ->
-                    new UnauthorizedException(
-                        "Correo o contraseña incorrectos"
-                    )
-                );
-
-        if (
-            !passwordEncoder.matches(
-                request.password(),
-                usuario.getPasswordHash()
-            )
-        ) {
-            throw new UnauthorizedException(
-                "Correo o contraseña incorrectos"
-            );
+        if (!passwordEncoder.matches(request.password(), usuario.getPasswordHash())) {
+            throw new UnauthorizedException("Correo o contraseña incorrectos");
         }
 
-        if (
-            Boolean.TRUE.equals(
-                usuario.getEmailVerificado()
-            )
-        ) {
-            throw new ConflictException(
-                "El correo electrónico ya fue verificado"
-            );
+        if (Boolean.TRUE.equals(usuario.getEmailVerificado())) {
+            throw new ConflictException("El correo electrónico ya fue verificado");
         }
 
-        if (
-            !AppConstants.EstadosUsuario.PENDIENTE.equalsIgnoreCase(
-                usuario.getEstado().getNombre()
-            )
-        ) {
-            throw new ConflictException(
-                "La cuenta no se encuentra pendiente de verificación"
-            );
+        if (!AppConstants.EstadosUsuario.PENDIENTE.equalsIgnoreCase(usuario.getEstado().getNombre())) {
+            throw new ConflictException("La cuenta no se encuentra pendiente de verificación");
         }
 
-        OtpService.OtpGenerado nuevo =
-            otpService
-                .reiniciarEmailVerification(
-                    usuario
-                );
-
-        return new RestartEmailVerificationResponse(
-            nuevo.id(),
-            "Se envió un nuevo código de verificación"
-        );
+        OtpService.OtpGenerado nuevo = otpService.reiniciarEmailVerification(usuario);
+        return new RestartEmailVerificationResponse(nuevo.id(), "Se envió un nuevo código de verificación");
     }
 }

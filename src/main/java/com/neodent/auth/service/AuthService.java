@@ -24,102 +24,43 @@ public class AuthService {
     private final OtpService otpService;
     private final JwtService jwtService;
 
-
     @Transactional
     public LoginResponse login(LoginRequest request) {
+        String email = request.email().trim().toLowerCase();
 
-        String email = request.email()
-            .trim()
-            .toLowerCase();
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
+            .orElseThrow(() -> new UnauthorizedException("Correo o contraseña incorrectos"));
 
-        Usuario usuario = usuarioRepository
-            .findByEmailIgnoreCase(email)
-            .orElseThrow(() ->
-                new UnauthorizedException(
-                    "Correo o contraseña incorrectos"
-                )
-            );
-
-
-        boolean passwordValido =
-            passwordEncoder.matches(
-                request.password(),
-                usuario.getPasswordHash()
-            );
-
-
+        boolean passwordValido = passwordEncoder.matches(request.password(), usuario.getPasswordHash());
         if (!passwordValido) {
-            throw new UnauthorizedException(
-                "Correo o contraseña incorrectos"
-            );
+            throw new UnauthorizedException("Correo o contraseña incorrectos");
         }
 
-
-        String estado =
-            usuario.getEstado()
-                .getNombre();
-
+        String estado = usuario.getEstado().getNombre();
 
         if (AppConstants.EstadosUsuario.BLOQUEADO.equalsIgnoreCase(estado)) {
-            throw new ForbiddenException(
-                "La cuenta se encuentra bloqueada"
-            );
+            throw new ForbiddenException("La cuenta se encuentra bloqueada");
         }
-
-
         if (AppConstants.EstadosUsuario.INACTIVO.equalsIgnoreCase(estado)) {
-            throw new ForbiddenException(
-                "La cuenta se encuentra inactiva"
-            );
+            throw new ForbiddenException("La cuenta se encuentra inactiva");
         }
-
-
         if (AppConstants.EstadosUsuario.PENDIENTE.equalsIgnoreCase(estado)) {
-            throw new ForbiddenException(
-                "La cuenta aún no ha sido activada"
-            );
+            throw new ForbiddenException("La cuenta aún no ha sido activada");
         }
 
-
-        if (usuario.getTwoFactorEnabled()) {
-
-            OtpService.OtpGenerado otp =
-                otpService.generarLoginOtp(usuario);
-
-            return new LoginResponse(
-                true,
-                otp.id(),
-                "Se requiere verificación en dos pasos"
-            );
+        boolean requires2fa = usuario.getTwoFactorEnabled() == null || Boolean.TRUE.equals(usuario.getTwoFactorEnabled());
+        if (requires2fa) {
+            OtpService.OtpGenerado otp = otpService.generarLoginOtp(usuario);
+            return new LoginResponse(true, otp.id(), "Se requiere verificación en dos pasos");
         }
 
-        return new LoginResponse(
-            false,
-            null,
-            "Credenciales correctas"
-        );
+        return new LoginResponse(false, null, "Credenciales correctas");
     }
 
+    public VerifyTwoFactorResponse verificarTwoFactor(VerifyTwoFactorRequest request) {
+        Usuario usuario = otpService.verificarLoginOtp(request.challengeId(), request.codigo());
+        String accessToken = jwtService.generarAccessToken(usuario);
 
-    public VerifyTwoFactorResponse verificarTwoFactor(
-        VerifyTwoFactorRequest request
-    ) {
-
-        Usuario usuario =
-            otpService.verificarLoginOtp(
-                request.challengeId(),
-                request.codigo()
-            );
-
-        String accessToken =
-            jwtService.generarAccessToken(usuario);
-
-        return new VerifyTwoFactorResponse(
-            true,
-            accessToken,
-            "Bearer",
-            900,
-            "Autenticación completada correctamente"
-        );
+        return new VerifyTwoFactorResponse(true, accessToken, "Bearer", 900, "Autenticación completada correctamente");
     }
 }

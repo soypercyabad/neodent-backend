@@ -24,18 +24,11 @@ public class JwtService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
             .issuer("neodent-api")
             .issuedAt(now)
-            .expiresAt(
-                now.plusSeconds(expirationMinutes * 60)
-            )
+            .expiresAt(now.plusSeconds(expirationMinutes * 60))
             .subject(usuario.getId().toString())
-            .claim(
-                "role",
-                usuario.getRol().getNombre()
-            )
+            .claim("role", usuario.getRol().getNombre())
             .build();
 
-        return jwtEncoder.encode(
-            JwtEncoderParameters.from(claims)
-        ).getTokenValue();
+        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
 }
