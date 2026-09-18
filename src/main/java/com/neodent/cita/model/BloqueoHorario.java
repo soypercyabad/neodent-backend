@@ -38,13 +38,13 @@ public class BloqueoHorario {
     private String motivo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario creadoPor;
 
     @Column(
-        name = "created_at",
+        name = "fecha_creacion",
         insertable = false,
         updatable = false
     )
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 }

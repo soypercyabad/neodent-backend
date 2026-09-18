@@ -15,7 +15,8 @@ import org.springframework.boot.test.context.SpringBootTest;
     "BREVO_SENDER_EMAIL=test@neodent.pe",
     "JWT_SECRET=neodent-jwt-super-secret-key-which-has-more-than-256-bits-length",
     "TURNSTILE_SECRET=test-turnstile-secret",
-    "FRONTEND_URL=http://localhost:3000"
+    "FRONTEND_URL=http://localhost:3000",
+    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect"
 })
 class NeodentBackendApplicationTests {
 

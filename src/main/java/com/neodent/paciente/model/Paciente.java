@@ -51,22 +51,22 @@ public class Paciente {
     @Column(name = "telefono", length = 20)
     private String telefono;
 
-    @Column(name = "email", length = 120)
-    private String email;
+    @Column(name = "correo", length = 120)
+    private String correo;
 
     @Column(name = "direccion", length = 255)
     private String direccion;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id", unique = true)
+    @JoinColumn(name = "id_usuario", unique = true)
     private Usuario usuario;
 
     @Column(name = "activo", nullable = false)
     private Boolean activo;
 
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "fecha_creacion", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
 
-    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "fecha_actualizacion", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime fechaActualizacion;
 }

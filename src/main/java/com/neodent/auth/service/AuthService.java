@@ -15,23 +15,28 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+    private final RefreshTokenService refreshTokenService;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
     private final JwtService jwtService;
+    private final Clock clock;
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
         String email = request.email().trim().toLowerCase();
 
-        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
+        Usuario usuario = usuarioRepository.findByCorreoIgnoreCase(email)
             .orElseThrow(() -> new UnauthorizedException("Correo o contraseña incorrectos"));
 
-        boolean passwordValido = passwordEncoder.matches(request.password(), usuario.getPasswordHash());
+        boolean passwordValido = passwordEncoder.matches(request.password(), usuario.getHashContrasena());
         if (!passwordValido) {
             throw new UnauthorizedException("Correo o contraseña incorrectos");
         }
@@ -48,19 +53,48 @@ public class AuthService {
             throw new ForbiddenException("La cuenta aún no ha sido activada");
         }
 
-        boolean requires2fa = usuario.getTwoFactorEnabled() == null || Boolean.TRUE.equals(usuario.getTwoFactorEnabled());
+        boolean requires2fa = usuario.getSegundoFactor() == null || Boolean.TRUE.equals(usuario.getSegundoFactor());
         if (requires2fa) {
             OtpService.OtpGenerado otp = otpService.generarLoginOtp(usuario);
             return new LoginResponse(true, otp.id(), "Se requiere verificación en dos pasos");
         }
 
+        usuario.setUltimoLogin(LocalDateTime.now(clock));
+        usuarioRepository.save(usuario);
+
         return new LoginResponse(false, null, "Credenciales correctas");
     }
 
-    public VerifyTwoFactorResponse verificarTwoFactor(VerifyTwoFactorRequest request) {
+    @Transactional
+    public SesionAutenticada verificarTwoFactor(VerifyTwoFactorRequest request) {
         Usuario usuario = otpService.verificarLoginOtp(request.challengeId(), request.codigo());
-        String accessToken = jwtService.generarAccessToken(usuario);
 
-        return new VerifyTwoFactorResponse(true, accessToken, "Bearer", 900, "Autenticación completada correctamente");
+        usuario.setUltimoLogin(LocalDateTime.now(clock));
+        usuarioRepository.save(usuario);
+
+        String accessToken = jwtService.generarAccessToken(usuario);
+        RefreshTokenService.RefreshGenerado refresh = refreshTokenService.crear(usuario);
+
+        return new SesionAutenticada(
+            new VerifyTwoFactorResponse(
+                true,
+                accessToken,
+                "Bearer",
+                jwtService.getExpirationSeconds(),
+                "Autenticación completada correctamente"
+            ),
+            refresh.token(),
+            refresh.maxAgeSeconds()
+        );
+    }
+
+    public record SesionAutenticada(
+        VerifyTwoFactorResponse response,
+        String refreshToken,
+        long refreshMaxAgeSeconds
+    ) {}
+
+    public long getAccessTokenExpirationSeconds() {
+        return jwtService.getExpirationSeconds();
     }
 }

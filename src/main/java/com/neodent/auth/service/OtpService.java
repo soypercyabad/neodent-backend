@@ -42,16 +42,16 @@ public class OtpService {
 
         CodigoVerificacion otp = new CodigoVerificacion();
         otp.setUsuario(usuario);
-        otp.setEmailDestino(usuario.getEmail());
+        otp.setCorreoDestino(usuario.getCorreo());
         otp.setTipo(TIPO_LOGIN);
-        otp.setCodigoHash(passwordEncoder.encode(codigo));
-        otp.setExpiresAt(LocalDateTime.now().plusMinutes(EXPIRACION_MINUTOS));
+        otp.setHashCodigo(passwordEncoder.encode(codigo));
+        otp.setFechaExpiracion(LocalDateTime.now(clock).plusMinutes(EXPIRACION_MINUTOS));
         otp.setIntentos((short) 0);
         otp.setMaxIntentos((short) 5);
         otp.setUsado(false);
 
         CodigoVerificacion guardado = repository.save(otp);
-        emailService.enviarOtpLogin(usuario.getEmail(), codigo);
+        emailService.enviarOtpLogin(usuario.getCorreo(), codigo);
 
         return new OtpGenerado(guardado.getId(), codigo);
     }
@@ -67,11 +67,11 @@ public class OtpService {
         if (otp.getUsado()) {
             throw new UnauthorizedException("El código ya fue utilizado");
         }
-        if (LocalDateTime.now(clock).isAfter(otp.getExpiresAt())) {
+        if (LocalDateTime.now(clock).isAfter(otp.getFechaExpiracion())) {
             throw new UnauthorizedException("El código ha expirado");
         }
 
-        boolean valido = passwordEncoder.matches(codigo, otp.getCodigoHash());
+        boolean valido = passwordEncoder.matches(codigo, otp.getHashCodigo());
         if (!valido) {
             short nuevosIntentos = (short) (otp.getIntentos() + 1);
             otp.setIntentos(nuevosIntentos);
@@ -98,16 +98,16 @@ public class OtpService {
 
         CodigoVerificacion otp = new CodigoVerificacion();
         otp.setUsuario(usuario);
-        otp.setEmailDestino(usuario.getEmail());
+        otp.setCorreoDestino(usuario.getCorreo());
         otp.setTipo(TIPO_EMAIL);
-        otp.setCodigoHash(passwordEncoder.encode(codigo));
-        otp.setExpiresAt(LocalDateTime.now().plusMinutes(EXPIRACION_MINUTOS));
+        otp.setHashCodigo(passwordEncoder.encode(codigo));
+        otp.setFechaExpiracion(LocalDateTime.now(clock).plusMinutes(EXPIRACION_MINUTOS));
         otp.setIntentos((short) 0);
         otp.setMaxIntentos((short) 5);
         otp.setUsado(false);
 
         CodigoVerificacion guardado = repository.save(otp);
-        emailService.enviarVerificacionEmail(usuario.getEmail(), codigo);
+        emailService.enviarVerificacionEmail(usuario.getCorreo(), codigo);
 
         return new OtpGenerado(guardado.getId(), codigo);
     }
@@ -123,11 +123,11 @@ public class OtpService {
         if (otp.getUsado()) {
             throw new UnauthorizedException("El código ya fue utilizado");
         }
-        if (LocalDateTime.now(clock).isAfter(otp.getExpiresAt())) {
+        if (LocalDateTime.now(clock).isAfter(otp.getFechaExpiracion())) {
             throw new UnauthorizedException("El código ha expirado");
         }
 
-        boolean valido = passwordEncoder.matches(codigo, otp.getCodigoHash());
+        boolean valido = passwordEncoder.matches(codigo, otp.getHashCodigo());
         if (!valido) {
             short intentos = (short) (otp.getIntentos() + 1);
             otp.setIntentos(intentos);
@@ -159,19 +159,19 @@ public class OtpService {
             throw new UnauthorizedException("El código ya fue utilizado");
         }
 
-        short reenvios = anterior.getResendCount() == null ? 0 : anterior.getResendCount();
+        short reenvios = anterior.getNumReenvios() == null ? 0 : anterior.getNumReenvios();
         if (reenvios >= MAX_REENVIOS) {
             throw new UnauthorizedException("Se alcanzó el máximo de reenvíos permitidos");
         }
 
         LocalDateTime ahora = LocalDateTime.now(clock);
-        if (anterior.getLastResendAt() != null && ahora.isBefore(anterior.getLastResendAt().plusSeconds(COOLDOWN_REENVIO_SEGUNDOS))) {
+        if (anterior.getFechaUltimoReenvio() != null && ahora.isBefore(anterior.getFechaUltimoReenvio().plusSeconds(COOLDOWN_REENVIO_SEGUNDOS))) {
             throw new UnauthorizedException("Espere un minuto antes de solicitar otro código");
         }
 
         anterior.setUsado(true);
-        anterior.setResendCount((short) (reenvios + 1));
-        anterior.setLastResendAt(ahora);
+        anterior.setNumReenvios((short) (reenvios + 1));
+        anterior.setFechaUltimoReenvio(ahora);
         repository.saveAndFlush(anterior);
 
         OtpGenerado nuevo = switch (anterior.getTipo()) {
@@ -184,8 +184,8 @@ public class OtpService {
         CodigoVerificacion nuevoOtp = repository.findById(nuevo.id())
             .orElseThrow(() -> new IllegalStateException("No se pudo recuperar el nuevo código"));
 
-        nuevoOtp.setResendCount((short) (reenvios + 1));
-        nuevoOtp.setLastResendAt(ahora);
+        nuevoOtp.setNumReenvios((short) (reenvios + 1));
+        nuevoOtp.setFechaUltimoReenvio(ahora);
         repository.saveAndFlush(nuevoOtp);
 
         return nuevo;
@@ -207,16 +207,16 @@ public class OtpService {
         CodigoVerificacion otp = new CodigoVerificacion();
         otp.setUsuario(null);
         otp.setPaciente(paciente);
-        otp.setEmailDestino(paciente.getEmail());
+        otp.setCorreoDestino(paciente.getCorreo());
         otp.setTipo(AppConstants.TiposOtp.ACCOUNT_ACTIVATION);
-        otp.setCodigoHash(passwordEncoder.encode(codigo));
-        otp.setExpiresAt(LocalDateTime.now(clock).plusMinutes(EXPIRACION_MINUTOS));
+        otp.setHashCodigo(passwordEncoder.encode(codigo));
+        otp.setFechaExpiracion(LocalDateTime.now(clock).plusMinutes(EXPIRACION_MINUTOS));
         otp.setIntentos((short) 0);
         otp.setMaxIntentos((short) 5);
         otp.setUsado(false);
 
         CodigoVerificacion guardado = repository.save(otp);
-        emailService.enviarOtpActivacionCuenta(paciente.getEmail(), codigo);
+        emailService.enviarOtpActivacionCuenta(paciente.getCorreo(), codigo);
 
         return new OtpGenerado(guardado.getId(), codigo);
     }
@@ -232,11 +232,11 @@ public class OtpService {
         if (otp.getUsado()) {
             throw new UnauthorizedException("El código ya fue utilizado");
         }
-        if (LocalDateTime.now(clock).isAfter(otp.getExpiresAt())) {
+        if (LocalDateTime.now(clock).isAfter(otp.getFechaExpiracion())) {
             throw new UnauthorizedException("El código ha expirado");
         }
 
-        if (!passwordEncoder.matches(codigo, otp.getCodigoHash())) {
+        if (!passwordEncoder.matches(codigo, otp.getHashCodigo())) {
             short intentos = (short) (otp.getIntentos() + 1);
             otp.setIntentos(intentos);
 

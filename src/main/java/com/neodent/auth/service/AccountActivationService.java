@@ -38,7 +38,7 @@ public class AccountActivationService {
     public AccountInvitationResponse validar(String token) {
         Paciente paciente = accountInvitationService.validarToken(token);
         String nombre = paciente.getNombres() + " " + paciente.getApellidoPaterno();
-        return new AccountInvitationResponse(true, nombre, enmascararEmail(paciente.getEmail()));
+        return new AccountInvitationResponse(true, nombre, enmascararEmail(paciente.getCorreo()));
     }
 
     @Transactional
@@ -61,7 +61,7 @@ public class AccountActivationService {
         OtpService.OtpGenerado otp = otpService.generarAccountActivationOtp(paciente);
         return new StartAccountActivationResponse(
             otp.id(),
-            enmascararEmail(paciente.getEmail()),
+            enmascararEmail(paciente.getCorreo()),
             "Se envió un código para continuar con la activación"
         );
     }
@@ -79,8 +79,8 @@ public class AccountActivationService {
             throw new ConflictException("El paciente ya tiene una cuenta asociada");
         }
 
-        String email = pacienteToken.getEmail().trim().toLowerCase();
-        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
+        String email = pacienteToken.getCorreo().trim().toLowerCase();
+        if (usuarioRepository.existsByCorreoIgnoreCase(email)) {
             throw new ConflictException("Ya existe una cuenta registrada con este correo");
         }
 
@@ -91,13 +91,13 @@ public class AccountActivationService {
             .orElseThrow(() -> new IllegalStateException("Estado ACTIVO no configurado"));
 
         Usuario usuario = new Usuario();
-        usuario.setUsername(null);
-        usuario.setEmail(email);
-        usuario.setPasswordHash(passwordEncoder.encode(request.password()));
-        usuario.setRol(rol);
+        usuario.setAliasInterno(null);
+        usuario.setCorreo(email);
+        usuario.setHashContrasena(passwordEncoder.encode(request.password()));
+        usuario.getRoles().add(rol);
         usuario.setEstado(activo);
-        usuario.setEmailVerificado(true);
-        usuario.setTwoFactorEnabled(true);
+        usuario.setCorreoVerificado(true);
+        usuario.setSegundoFactor(true);
 
         Usuario guardado = usuarioRepository.save(usuario);
         pacienteToken.setUsuario(guardado);
@@ -112,11 +112,11 @@ public class AccountActivationService {
         );
     }
 
-    private String enmascararEmail(String email) {
-        int arroba = email.indexOf("@");
+    private String enmascararEmail(String correo) {
+        int arroba = correo.indexOf("@");
         if (arroba <= 2) {
-            return "***" + email.substring(arroba);
+            return "***" + correo.substring(arroba);
         }
-        return email.substring(0, 2) + "***" + email.substring(arroba);
+        return correo.substring(0, 2) + "***" + correo.substring(arroba);
     }
 }

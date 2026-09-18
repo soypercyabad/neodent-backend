@@ -11,4 +11,6 @@ public interface EmailService {
     void enviarCitaConfirmada(String destinatario, CitaConfirmadaEmailData data);
 
     void enviarOtpActivacionCuenta(String destinatario, String codigo);
+
+    void enviarRestablecimientoContrasena(String destinatario, String resetUrl);
 }

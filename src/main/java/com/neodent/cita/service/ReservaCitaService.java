@@ -27,6 +27,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +45,7 @@ public class ReservaCitaService {
     private final SecureRandom random = new SecureRandom();
 
     @Transactional
-    public ReservaCitaResponse crearHold(CrearReservaCitaRequest request, Long usuarioId, String rol) {
+    public ReservaCitaResponse crearHold(CrearReservaCitaRequest request, Long usuarioId, List<String> roles) {
         LocalDateTime ahora = LocalDateTime.now(clock);
 
         if (!request.fechaHoraInicio().isAfter(ahora)) {
@@ -52,7 +53,7 @@ public class ReservaCitaService {
         }
 
         Paciente paciente;
-        if (AppConstants.Roles.PACIENTE.equals(rol)) {
+        if (roles != null && roles.contains(AppConstants.Roles.PACIENTE)) {
             paciente = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente asociado al usuario no encontrado"));
         } else {
@@ -90,7 +91,7 @@ public class ReservaCitaService {
             throw new ConflictException("El odontólogo no está disponible en ese horario");
         }
 
-        int diaSemana = inicio.getDayOfWeek().getValue();
+        byte diaSemana = (byte) inicio.getDayOfWeek().getValue();
         boolean dentroHorario = horarioRepository.existeHorarioDisponible(
             oe.getId(),
             sede.getId(),
@@ -122,7 +123,7 @@ public class ReservaCitaService {
         reserva.setServicioSolicitado(servicio);
         reserva.setFechaHoraInicio(inicio);
         reserva.setFechaHoraFin(fin);
-        reserva.setExpiresAt(expiresAt);
+        reserva.setFechaExpiracion(expiresAt);
         reserva.setConfirmada(false);
 
         reservaRepository.save(reserva);

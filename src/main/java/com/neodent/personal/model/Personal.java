@@ -1,5 +1,6 @@
 package com.neodent.personal.model;
 
+import com.neodent.paciente.model.TipoDocumento;
 import com.neodent.usuario.model.Usuario;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -21,8 +22,15 @@ public class Personal {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false, unique = true)
+    @JoinColumn(name = "id_usuario", nullable = false, unique = true)
     private Usuario usuario;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "id_tipo_documento", nullable = false)
+    private TipoDocumento tipoDocumento;
+
+    @Column(name = "numero_documento", nullable = false, length = 20)
+    private String numeroDocumento;
 
     @Column(name = "nombres", nullable = false, length = 80)
     private String nombres;
@@ -39,9 +47,9 @@ public class Personal {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "fecha_creacion", insertable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
 
-    @Column(name = "updated_at", insertable = false, updatable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "fecha_actualizacion", insertable = false, updatable = false)
+    private LocalDateTime fechaActualizacion;
 }

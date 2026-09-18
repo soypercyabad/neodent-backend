@@ -21,11 +21,11 @@ public interface PacienteRepository
 
     boolean existsByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
 
-    boolean existsByEmailIgnoreCase(String email);
+    boolean existsByCorreoIgnoreCase(String correo);
 
     boolean existsByTelefono(String telefono);
 
-    boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
+    boolean existsByCorreoIgnoreCaseAndIdNot(String correo, Long id);
 
     boolean existsByTelefonoAndIdNot(String telefono, Long id);
 }

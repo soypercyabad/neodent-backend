@@ -28,6 +28,8 @@ import com.neodent.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,13 +60,13 @@ public class CitaService {
     private String frontendUrl;
 
     @Transactional
-    public CitaResponse confirmarCita(String tokenReserva, Long usuarioId, String rol) {
+    public CitaResponse confirmarCita(String tokenReserva, Long usuarioId, List<String> roles) {
         LocalDateTime ahora = LocalDateTime.now(clock);
 
         ReservaCitaTemporal reserva = reservaRepository.findPorTokenParaConfirmar(tokenReserva)
             .orElseThrow(() -> new ResourceNotFoundException("Reserva temporal no encontrada o ya utilizada"));
 
-        if (AppConstants.Roles.PACIENTE.equals(rol)) {
+        if (roles != null && roles.contains(AppConstants.Roles.PACIENTE)) {
             Paciente pacienteReserva = reserva.getPaciente();
 
             if (pacienteReserva.getUsuario() == null || !pacienteReserva.getUsuario().getId().equals(usuarioId)) {
@@ -72,7 +74,7 @@ public class CitaService {
             }
         }
 
-        if (!reserva.getExpiresAt().isAfter(ahora)) {
+        if (!reserva.getFechaExpiracion().isAfter(ahora)) {
             throw new ConflictException("La reserva temporal ha expirado");
         }
 
@@ -144,7 +146,7 @@ public class CitaService {
     private void enviarCorreoCita(Cita cita) {
         Paciente paciente = cita.getPaciente();
 
-        if (paciente.getEmail() == null || paciente.getEmail().isBlank()) {
+        if (paciente.getCorreo() == null || paciente.getCorreo().isBlank()) {
             log.warn("No se envió correo para la cita {} porque el paciente {} no tiene email", cita.getId(), paciente.getId());
             return;
         }
@@ -181,7 +183,7 @@ public class CitaService {
             ctaUrl
         );
 
-        emailService.enviarCitaConfirmada(paciente.getEmail(), data);
+        emailService.enviarCitaConfirmada(paciente.getCorreo(), data);
     }
 
     private String construirNombre(String nombres, String apellidoPaterno, String apellidoMaterno) {
@@ -226,7 +228,7 @@ public class CitaService {
         }
 
         LocalDateTime nuevoFin = nuevoInicio.plusMinutes(duracion);
-        int diaSemana = nuevoInicio.getDayOfWeek().getValue();
+        byte diaSemana = (byte) nuevoInicio.getDayOfWeek().getValue();
 
         boolean dentroHorario = horarioRepository.existeHorarioDisponible(
             cita.getOdontologoEspecialidad().getId(),
@@ -586,49 +588,45 @@ public class CitaService {
     }
 
     @Transactional(readOnly = true)
-    public List<CitaResponse> obtenerMisCitas(Long usuarioId) {
-        List<Cita> citas = citaRepository.findByPacienteUsuarioIdOrderByFechaHoraInicioDesc(usuarioId);
+    public Page<CitaResponse> obtenerMisCitas(Long usuarioId, Pageable pageable) {
+        Page<Cita> citas = citaRepository.findByPacienteUsuarioIdOrderByFechaHoraInicioDesc(usuarioId, pageable);
 
-        return citas.stream()
-            .map(cita -> {
-                Integer servicioId = cita.getServicioSolicitado() != null ? cita.getServicioSolicitado().getId() : null;
+        return citas.map(cita -> {
+            Integer servicioId = cita.getServicioSolicitado() != null ? cita.getServicioSolicitado().getId() : null;
 
-                return new CitaResponse(
-                    cita.getId(),
-                    cita.getPaciente().getId(),
-                    cita.getOdontologoEspecialidad().getId(),
-                    cita.getSede().getId(),
-                    servicioId,
-                    cita.getEstado().getNombre(),
-                    cita.getFechaHoraInicio(),
-                    cita.getFechaHoraFin(),
-                    "Cita consultada correctamente"
-                );
-            })
-            .toList();
+            return new CitaResponse(
+                cita.getId(),
+                cita.getPaciente().getId(),
+                cita.getOdontologoEspecialidad().getId(),
+                cita.getSede().getId(),
+                servicioId,
+                cita.getEstado().getNombre(),
+                cita.getFechaHoraInicio(),
+                cita.getFechaHoraFin(),
+                "Cita consultada correctamente"
+            );
+        });
     }
 
     @Transactional(readOnly = true)
-    public List<CitaResponse> obtenerMiAgenda(Long usuarioId) {
-        List<Cita> citas = citaRepository.findByOdontologoEspecialidadOdontologoPersonalUsuarioIdOrderByFechaHoraInicioDesc(usuarioId);
+    public Page<CitaResponse> obtenerMiAgenda(Long usuarioId, Pageable pageable) {
+        Page<Cita> citas = citaRepository.findByOdontologoEspecialidadOdontologoPersonalUsuarioIdOrderByFechaHoraInicioDesc(usuarioId, pageable);
 
-        return citas.stream()
-            .map(cita -> {
-                Integer servicioId = cita.getServicioSolicitado() != null ? cita.getServicioSolicitado().getId() : null;
+        return citas.map(cita -> {
+            Integer servicioId = cita.getServicioSolicitado() != null ? cita.getServicioSolicitado().getId() : null;
 
-                return new CitaResponse(
-                    cita.getId(),
-                    cita.getPaciente().getId(),
-                    cita.getOdontologoEspecialidad().getId(),
-                    cita.getSede().getId(),
-                    servicioId,
-                    cita.getEstado().getNombre(),
-                    cita.getFechaHoraInicio(),
-                    cita.getFechaHoraFin(),
-                    "Cita consultada correctamente"
-                );
-            })
-            .toList();
+            return new CitaResponse(
+                cita.getId(),
+                cita.getPaciente().getId(),
+                cita.getOdontologoEspecialidad().getId(),
+                cita.getSede().getId(),
+                servicioId,
+                cita.getEstado().getNombre(),
+                cita.getFechaHoraInicio(),
+                cita.getFechaHoraFin(),
+                "Cita consultada correctamente"
+            );
+        });
     }
 
     @Transactional(readOnly = true)

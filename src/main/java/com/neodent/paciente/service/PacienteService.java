@@ -63,7 +63,7 @@ public class PacienteService {
         paciente.setApellidoMaterno(NameFormatter.format(request.apellidoMaterno()));
         paciente.setFechaNacimiento(request.fechaNacimiento());
         paciente.setTelefono(telefono);
-        paciente.setEmail(email);
+        paciente.setCorreo(email);
         paciente.setDireccion(normalizarTextoOpcional(request.direccion()));
         paciente.setUsuario(null);
         paciente.setActivo(true);
@@ -89,7 +89,7 @@ public class PacienteService {
         paciente.setApellidoMaterno(NameFormatter.format(request.apellidoMaterno()));
         paciente.setFechaNacimiento(request.fechaNacimiento());
         paciente.setTelefono(telefono);
-        paciente.setEmail(email);
+        paciente.setCorreo(email);
         paciente.setDireccion(normalizarTextoOpcional(request.direccion()));
 
         Paciente actualizado = pacienteRepository.save(paciente);
@@ -144,7 +144,7 @@ public class PacienteService {
         paciente.setApellidoMaterno(NameFormatter.format(request.apellidoMaterno()));
         paciente.setFechaNacimiento(request.fechaNacimiento());
         paciente.setTelefono(telefono);
-        paciente.setEmail(email);
+        paciente.setCorreo(email);
         paciente.setDireccion(normalizarTextoOpcional(request.direccion()));
         paciente.setUsuario(usuario);
         paciente.setActivo(true);
@@ -160,8 +160,8 @@ public class PacienteService {
     private void validarDatosUnicos(String email, String telefono, Long pacienteId) {
         if (email != null) {
             boolean existeEmail = pacienteId == null
-                ? pacienteRepository.existsByEmailIgnoreCase(email)
-                : pacienteRepository.existsByEmailIgnoreCaseAndIdNot(email, pacienteId);
+                ? pacienteRepository.existsByCorreoIgnoreCase(email)
+                : pacienteRepository.existsByCorreoIgnoreCaseAndIdNot(email, pacienteId);
 
             if (existeEmail) {
                 throw new ConflictException("Ya existe un paciente registrado con este correo electrónico");

@@ -68,7 +68,7 @@ public class DisponibilidadCitaService {
         }
 
         int duracion = servicio.getDuracionMinutos() != null ? servicio.getDuracionMinutos() : AppConstants.Citas.DURACION_DEFAULT_MINUTOS;
-        int diaSemana = fecha.getDayOfWeek().getValue();
+        byte diaSemana = (byte) fecha.getDayOfWeek().getValue();
 
         List<HorarioOdontologo> horarios = horarioRepository
             .findByOdontologoEspecialidadIdAndSedeIdAndDiaSemanaAndActivoTrueOrderByHoraInicio(odontologoEspecialidadId, sedeId, diaSemana);

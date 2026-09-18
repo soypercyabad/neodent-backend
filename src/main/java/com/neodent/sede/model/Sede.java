@@ -34,19 +34,19 @@ public class Sede {
     @Column(length = 20)
     private String telefono;
 
-    @Column(length = 120)
+    @Column(name = "correo", length = 120)
     private String email;
 
-    @Column(name = "qr_pago_storage_key", length = 255)
-    private String qrPagoStorageKey;
+    @Column(name = "qr_pago_clave_almacenamiento", length = 255)
+    private String qrPagoClaveAlmacenamiento;
 
     @Column(nullable = false)
     private Boolean activo = true;
 
     @Column(
-        name = "created_at",
+        name = "fecha_creacion",
         insertable = false,
         updatable = false
     )
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 }

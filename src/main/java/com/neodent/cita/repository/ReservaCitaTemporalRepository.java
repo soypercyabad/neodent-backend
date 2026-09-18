@@ -34,7 +34,7 @@ public interface ReservaCitaTemporalRepository
         FROM ReservaCitaTemporal r
         WHERE r.odontologoEspecialidad.odontologo.id = :odontologoId
         AND r.confirmada = false
-        AND r.expiresAt > :ahora
+        AND r.fechaExpiracion > :ahora
         AND r.fechaHoraInicio < :fin
         AND r.fechaHoraFin > :inicio
     """)
@@ -57,7 +57,7 @@ public interface ReservaCitaTemporalRepository
         FROM ReservaCitaTemporal r
         WHERE r.odontologoEspecialidad.odontologo.id = :odontologoId
         AND r.confirmada = false
-        AND r.expiresAt > :ahora
+        AND r.fechaExpiracion > :ahora
         AND r.fechaHoraInicio < :fin
         AND r.fechaHoraFin > :inicio
     """)

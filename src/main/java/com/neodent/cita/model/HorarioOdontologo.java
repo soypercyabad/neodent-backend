@@ -31,7 +31,7 @@ public class HorarioOdontologo {
     private Sede sede;
 
     @Column(name = "dia_semana", nullable = false)
-    private Integer diaSemana;
+    private Byte diaSemana;
 
     @Column(name = "hora_inicio", nullable = false)
     private LocalTime horaInicio;

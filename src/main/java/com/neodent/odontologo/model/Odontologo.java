@@ -43,9 +43,9 @@ public class Odontologo {
     private Boolean activo = true;
 
     @Column(
-        name = "created_at",
+        name = "fecha_creacion",
         insertable = false,
         updatable = false
     )
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 }

@@ -4,6 +4,8 @@ import com.neodent.cita.model.Cita;
 
 import jakarta.persistence.LockModeType;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -79,33 +81,55 @@ public interface CitaRepository
         @Param("fin") LocalDateTime fin
     );
 
-    @Query("""
-        SELECT c
-        FROM Cita c
-        JOIN FETCH c.estado
-        JOIN FETCH c.paciente
-        JOIN FETCH c.odontologoEspecialidad oe
-        JOIN FETCH oe.odontologo o
-        JOIN FETCH oe.especialidad
-        JOIN FETCH c.sede
-        WHERE c.paciente.usuario.id = :usuarioId
-        ORDER BY c.fechaHoraInicio DESC
-    """)
-    List<Cita> findByPacienteUsuarioIdOrderByFechaHoraInicioDesc(@Param("usuarioId") Long usuarioId);
+    @Query(
+        value = """
+            SELECT c
+            FROM Cita c
+            JOIN FETCH c.estado
+            JOIN FETCH c.paciente
+            JOIN FETCH c.odontologoEspecialidad oe
+            JOIN FETCH oe.odontologo o
+            JOIN FETCH oe.especialidad
+            JOIN FETCH c.sede
+            WHERE c.paciente.usuario.id = :usuarioId
+        """,
+        countQuery = """
+            SELECT COUNT(c)
+            FROM Cita c
+            WHERE c.paciente.usuario.id = :usuarioId
+        """
+    )
+    Page<Cita> findByPacienteUsuarioIdOrderByFechaHoraInicioDesc(
+        @Param("usuarioId") Long usuarioId,
+        Pageable pageable
+    );
 
-    @Query("""
-        SELECT c
-        FROM Cita c
-        JOIN FETCH c.estado
-        JOIN FETCH c.paciente
-        JOIN FETCH c.odontologoEspecialidad oe
-        JOIN FETCH oe.odontologo o
-        JOIN FETCH oe.especialidad
-        JOIN FETCH c.sede
-        WHERE oe.odontologo.personal.usuario.id = :usuarioId
-        ORDER BY c.fechaHoraInicio DESC
-    """)
-    List<Cita> findByOdontologoEspecialidadOdontologoPersonalUsuarioIdOrderByFechaHoraInicioDesc(@Param("usuarioId") Long usuarioId);
+    @Query(
+        value = """
+            SELECT c
+            FROM Cita c
+            JOIN FETCH c.estado
+            JOIN FETCH c.paciente
+            JOIN FETCH c.odontologoEspecialidad oe
+            JOIN FETCH oe.odontologo o
+            JOIN FETCH oe.especialidad
+            JOIN FETCH c.sede
+            WHERE oe.odontologo.personal.usuario.id = :usuarioId
+        """,
+        countQuery = """
+            SELECT COUNT(c)
+            FROM Cita c
+            JOIN c.odontologoEspecialidad oe
+            JOIN oe.odontologo o
+            JOIN o.personal per
+            JOIN per.usuario u
+            WHERE u.id = :usuarioId
+        """
+    )
+    Page<Cita> findByOdontologoEspecialidadOdontologoPersonalUsuarioIdOrderByFechaHoraInicioDesc(
+        @Param("usuarioId") Long usuarioId,
+        Pageable pageable
+    );
 
     @Query("""
         SELECT c

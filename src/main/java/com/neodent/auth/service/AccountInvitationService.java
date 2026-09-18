@@ -43,7 +43,7 @@ public class AccountInvitationService {
             throw new ConflictException("El paciente ya tiene una cuenta asociada");
         }
 
-        if (paciente.getEmail() == null || paciente.getEmail().isBlank()) {
+        if (paciente.getCorreo() == null || paciente.getCorreo().isBlank()) {
             throw new ConflictException("El paciente no tiene un correo registrado");
         }
 
@@ -54,8 +54,8 @@ public class AccountInvitationService {
         invitacion.setPaciente(paciente);
         invitacion.setUsuario(null);
         invitacion.setTipo(TIPO);
-        invitacion.setTokenHash(hashToken(token));
-        invitacion.setExpiresAt(LocalDateTime.now(clock).plusHours(EXPIRACION_HORAS));
+        invitacion.setHashToken(hashToken(token));
+        invitacion.setFechaExpiracion(LocalDateTime.now(clock).plusHours(EXPIRACION_HORAS));
         invitacion.setUsado(false);
         invitacion.setRevocado(false);
 
@@ -67,10 +67,10 @@ public class AccountInvitationService {
 
     @Transactional(readOnly = true)
     public Paciente validarToken(String token) {
-        TokenAccion invitacion = repository.findByTokenHashAndTipoAndUsadoFalseAndRevocadoFalse(hashToken(token), TIPO)
+        TokenAccion invitacion = repository.findByHashTokenAndTipoAndUsadoFalseAndRevocadoFalse(hashToken(token), TIPO)
             .orElseThrow(() -> new UnauthorizedException("La invitación no es válida"));
 
-        if (LocalDateTime.now(clock).isAfter(invitacion.getExpiresAt())) {
+        if (LocalDateTime.now(clock).isAfter(invitacion.getFechaExpiracion())) {
             throw new UnauthorizedException("La invitación ha expirado");
         }
 
@@ -88,7 +88,7 @@ public class AccountInvitationService {
 
         anteriores.forEach(token -> {
             token.setRevocado(true);
-            token.setRevokedAt(ahora);
+            token.setFechaRevocacion(ahora);
         });
 
         repository.saveAll(anteriores);
@@ -113,11 +113,11 @@ public class AccountInvitationService {
     @Transactional
     public void marcarComoUsada(String token) {
         TokenAccion invitacion = repository
-            .findByTokenHashAndTipoAndUsadoFalseAndRevocadoFalse(hashToken(token), AppConstants.TiposTokenAccion.ACCOUNT_INVITATION)
+            .findByHashTokenAndTipoAndUsadoFalseAndRevocadoFalse(hashToken(token), AppConstants.TiposTokenAccion.ACCOUNT_INVITATION)
             .orElseThrow(() -> new UnauthorizedException("La invitación no es válida"));
 
         invitacion.setUsado(true);
-        invitacion.setUsedAt(LocalDateTime.now(clock));
+        invitacion.setFechaUso(LocalDateTime.now(clock));
         repository.save(invitacion);
     }
 

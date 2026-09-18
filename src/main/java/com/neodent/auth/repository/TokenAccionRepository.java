@@ -11,6 +11,8 @@ public interface TokenAccionRepository extends JpaRepository<TokenAccion, Long> 
 
     List<TokenAccion> findAllByPacienteIdAndTipoAndUsadoFalseAndRevocadoFalse(Long pacienteId, String tipo);
 
-    @EntityGraph(attributePaths = { "paciente", "paciente.tipoDocumento", "paciente.usuario" })
-    Optional<TokenAccion> findByTokenHashAndTipoAndUsadoFalseAndRevocadoFalse(String tokenHash, String tipo);
+    List<TokenAccion> findAllByUsuarioIdAndTipoAndUsadoFalseAndRevocadoFalse(Long usuarioId, String tipo);
+
+    @EntityGraph(attributePaths = {"paciente", "paciente.tipoDocumento", "paciente.usuario"})
+    Optional<TokenAccion> findByHashTokenAndTipoAndUsadoFalseAndRevocadoFalse(String hashToken, String tipo);
 }

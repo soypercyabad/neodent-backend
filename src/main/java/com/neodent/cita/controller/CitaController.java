@@ -17,6 +17,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.neodent.shared.response.PaginaResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -47,8 +51,8 @@ public class CitaController {
     @PostMapping("/hold")
     public ReservaCitaResponse crearHold(@Valid @RequestBody CrearReservaCitaRequest request, @AuthenticationPrincipal Jwt jwt) {
         Long usuarioId = Long.valueOf(jwt.getSubject());
-        String rol = jwt.getClaimAsString("role");
-        return reservaCitaService.crearHold(request, usuarioId, rol);
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        return reservaCitaService.crearHold(request, usuarioId, roles);
     }
 
 
@@ -65,8 +69,8 @@ public class CitaController {
     @PostMapping("/confirm")
     public CitaResponse confirmarCita(@Valid @RequestBody ConfirmarCitaRequest request, @AuthenticationPrincipal Jwt jwt) {
         Long usuarioId = Long.valueOf(jwt.getSubject());
-        String rol = jwt.getClaimAsString("role");
-        return citaService.confirmarCita(request.tokenReserva(), usuarioId, rol);
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        return citaService.confirmarCita(request.tokenReserva(), usuarioId, roles);
     }
 
 
@@ -201,30 +205,48 @@ public class CitaController {
 
     @Operation(
         summary = "Consultar mis citas",
-        description = "Obtiene únicamente las citas asociadas al paciente autenticado."
+        description = "Obtiene de forma paginada las citas asociadas al paciente autenticado."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Citas obtenidas correctamente")
     })
     @GetMapping("/mis-citas")
-    public List<CitaResponse> obtenerMisCitas(@AuthenticationPrincipal Jwt jwt) {
+    public PaginaResponse<CitaResponse> obtenerMisCitas(
+        @AuthenticationPrincipal Jwt jwt,
+        @RequestParam(value = "pagina", required = false) Integer pagina,
+        @RequestParam(value = "page", required = false) Integer page,
+        @RequestParam(value = "tamano", required = false) Integer tamano,
+        @RequestParam(value = "size", required = false) Integer size
+    ) {
+        int p = pagina != null ? pagina : (page != null ? page : 0);
+        int s = tamano != null ? tamano : (size != null ? size : 10);
         Long usuarioId = Long.valueOf(jwt.getSubject());
-        return citaService.obtenerMisCitas(usuarioId);
+        Pageable pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "fechaHoraInicio"));
+        return PaginaResponse.de(citaService.obtenerMisCitas(usuarioId, pageable));
     }
 
 
 
     @Operation(
         summary = "Consultar mi agenda",
-        description = "Obtiene únicamente las citas asignadas al odontólogo autenticado."
+        description = "Obtiene de forma paginada las citas asignadas al odontólogo autenticado."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Agenda obtenida correctamente")
     })
     @GetMapping("/mi-agenda")
-    public List<CitaResponse> obtenerMiAgenda(@AuthenticationPrincipal Jwt jwt) {
+    public PaginaResponse<CitaResponse> obtenerMiAgenda(
+        @AuthenticationPrincipal Jwt jwt,
+        @RequestParam(value = "pagina", required = false) Integer pagina,
+        @RequestParam(value = "page", required = false) Integer page,
+        @RequestParam(value = "tamano", required = false) Integer tamano,
+        @RequestParam(value = "size", required = false) Integer size
+    ) {
+        int p = pagina != null ? pagina : (page != null ? page : 0);
+        int s = tamano != null ? tamano : (size != null ? size : 10);
         Long usuarioId = Long.valueOf(jwt.getSubject());
-        return citaService.obtenerMiAgenda(usuarioId);
+        Pageable pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "fechaHoraInicio"));
+        return PaginaResponse.de(citaService.obtenerMiAgenda(usuarioId, pageable));
     }
 
 

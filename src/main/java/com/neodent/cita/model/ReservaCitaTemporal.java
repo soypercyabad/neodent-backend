@@ -55,16 +55,16 @@ public class ReservaCitaTemporal {
     @Column(name = "fecha_hora_fin", nullable = false)
     private LocalDateTime fechaHoraFin;
 
-    @Column(name = "expires_at", nullable = false)
-    private LocalDateTime expiresAt;
+    @Column(name = "fecha_expiracion", nullable = false)
+    private LocalDateTime fechaExpiracion;
 
     @Column(nullable = false)
     private Boolean confirmada = false;
 
     @Column(
-        name = "created_at",
+        name = "fecha_creacion",
         insertable = false,
         updatable = false
     )
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 }

@@ -62,20 +62,20 @@ public class Cita {
     private LocalDateTime confirmadaEn;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario creadoPor;
 
     @Column(
-        name = "created_at",
+        name = "fecha_creacion",
         insertable = false,
         updatable = false
     )
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 
     @Column(
-        name = "updated_at",
+        name = "fecha_actualizacion",
         insertable = false,
         updatable = false
     )
-    private LocalDateTime updatedAt;
+    private LocalDateTime fechaActualizacion;
 }

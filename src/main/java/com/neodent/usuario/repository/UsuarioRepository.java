@@ -9,8 +9,8 @@ import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
-    @EntityGraph(attributePaths = {"rol","estado"})
-    Optional<Usuario> findByEmailIgnoreCase(String email);
+    @EntityGraph(attributePaths = {"roles", "estado"})
+    Optional<Usuario> findByCorreoIgnoreCase(String correo);
 
-    boolean existsByEmailIgnoreCase(String email);
+    boolean existsByCorreoIgnoreCase(String correo);
 }

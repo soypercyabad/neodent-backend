@@ -32,11 +32,11 @@ public class HistorialCita {
     private String accion;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "estado_anterior_id")
+    @JoinColumn(name = "id_estado_anterior")
     private EstadoCita estadoAnterior;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "estado_nuevo_id")
+    @JoinColumn(name = "id_estado_nuevo")
     private EstadoCita estadoNuevo;
 
     @Column(name = "fecha_hora_anterior")
@@ -49,10 +49,10 @@ public class HistorialCita {
     private String motivo;
 
     @Column(
-        name = "created_at",
+        name = "fecha_creacion",
         nullable = false,
         insertable = false,
         updatable = false
     )
-    private LocalDateTime createdAt;
+    private LocalDateTime fechaCreacion;
 }

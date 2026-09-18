@@ -78,7 +78,7 @@ public class PatientRegistrationService {
 
         String email = request.email().trim().toLowerCase();
 
-        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
+        if (usuarioRepository.existsByCorreoIgnoreCase(email)) {
             throw new ConflictException("Ya existe una cuenta registrada con este correo");
         }
 
@@ -89,13 +89,13 @@ public class PatientRegistrationService {
             .orElseThrow(() -> new IllegalStateException("Estado PENDIENTE no configurado"));
 
         Usuario usuario = new Usuario();
-        usuario.setUsername(null);
-        usuario.setEmail(email);
-        usuario.setPasswordHash(passwordEncoder.encode(request.password()));
-        usuario.setRol(rolPaciente);
+        usuario.setAliasInterno(null);
+        usuario.setCorreo(email);
+        usuario.setHashContrasena(passwordEncoder.encode(request.password()));
+        usuario.getRoles().add(rolPaciente);
         usuario.setEstado(pendiente);
-        usuario.setTwoFactorEnabled(true);
-        usuario.setEmailVerificado(false);
+        usuario.setSegundoFactor(true);
+        usuario.setCorreoVerificado(false);
 
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
 
@@ -126,14 +126,14 @@ public class PatientRegistrationService {
     public VerifyEmailResponse verificarEmail(VerifyEmailRequest request) {
         Usuario usuario = otpService.verificarEmailOtp(request.challengeId(), request.codigo());
 
-        if (Boolean.TRUE.equals(usuario.getEmailVerificado())) {
+        if (Boolean.TRUE.equals(usuario.getCorreoVerificado())) {
             throw new ConflictException("El correo electrónico ya fue verificado");
         }
 
         EstadoUsuario activo = estadoUsuarioRepository.findByNombreAndActivoTrue(AppConstants.EstadosUsuario.ACTIVO)
             .orElseThrow(() -> new IllegalStateException("Estado ACTIVO no configurado"));
 
-        usuario.setEmailVerificado(true);
+        usuario.setCorreoVerificado(true);
         usuario.setEstado(activo);
         usuarioRepository.save(usuario);
 
@@ -147,14 +147,14 @@ public class PatientRegistrationService {
 
         String email = request.email().trim().toLowerCase();
 
-        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email)
+        Usuario usuario = usuarioRepository.findByCorreoIgnoreCase(email)
             .orElseThrow(() -> new UnauthorizedException("Correo o contraseña incorrectos"));
 
-        if (!passwordEncoder.matches(request.password(), usuario.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.password(), usuario.getHashContrasena())) {
             throw new UnauthorizedException("Correo o contraseña incorrectos");
         }
 
-        if (Boolean.TRUE.equals(usuario.getEmailVerificado())) {
+        if (Boolean.TRUE.equals(usuario.getCorreoVerificado())) {
             throw new ConflictException("El correo electrónico ya fue verificado");
         }
 

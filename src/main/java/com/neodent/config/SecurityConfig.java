@@ -21,7 +21,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
+import org.springframework.security.core.GrantedAuthority;
 
 @Configuration
 public class SecurityConfig {
@@ -163,11 +165,14 @@ public class SecurityConfig {
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            String role = jwt.getClaimAsString("role");
-            if (role == null) {
+            List<String> roles = jwt.getClaimAsStringList("roles");
+            if (roles == null) {
                 return List.of();
             }
-            return List.of(new SimpleGrantedAuthority(AppConstants.Roles.PREFIX + role));
+            Collection<GrantedAuthority> authorities = roles.stream()
+                .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(AppConstants.Roles.PREFIX + role))
+                .toList();
+            return authorities;
         });
         return converter;
     }

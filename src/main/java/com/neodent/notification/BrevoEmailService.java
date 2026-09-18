@@ -72,6 +72,20 @@ public class BrevoEmailService implements EmailService {
         enviar(destinatario, "Tu cita ha sido programada - NeoDent", html);
     }
 
+    @Async("taskExecutor")
+    @Override
+    public void enviarRestablecimientoContrasena(String destinatario, String resetUrl) {
+        Context context = new Context();
+        context.setVariable("resetUrl", resetUrl);
+
+        String html = templateEngine.process(
+            "email/" + AppConstants.PlantillasEmail.PASSWORD_RESET,
+            context
+        );
+
+        enviar(destinatario, "Restablece tu contraseña - NeoDent", html);
+    }
+
     private String renderTemplate(String template, String codigo) {
         Context context = new Context();
         context.setVariable("codigo", codigo);

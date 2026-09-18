@@ -24,7 +24,7 @@ public interface HorarioOdontologoRepository
     boolean existeHorarioDisponible(
         Long odontologoEspecialidadId,
         Integer sedeId,
-        Integer diaSemana,
+        Byte diaSemana,
         LocalTime inicio,
         LocalTime fin
     );
@@ -33,6 +33,6 @@ public interface HorarioOdontologoRepository
     findByOdontologoEspecialidadIdAndSedeIdAndDiaSemanaAndActivoTrueOrderByHoraInicio(
         Long odontologoEspecialidadId,
         Integer sedeId,
-        Integer diaSemana
+        Byte diaSemana
     );
 }
