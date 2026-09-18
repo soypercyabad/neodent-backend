@@ -4,12 +4,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest(properties = {
-        "spring.autoconfigure.exclude="
-                + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
-                + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
-                + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
+    "DB_URL=jdbc:mysql://localhost:3306/neodent_test",
+    "DB_USERNAME=root",
+    "DB_PASSWORD=root",
+    "SPRING_JPA_HIBERNATE_DDL_AUTO=none",
+    "SHOW_SQL=false",
+    "PORT=8080",
+    "DNI_API_TOKEN=test-token",
+    "BREVO_API_KEY=test-brevo-key",
+    "BREVO_SENDER_EMAIL=test@neodent.pe",
+    "JWT_SECRET=neodent-jwt-super-secret-key-which-has-more-than-256-bits-length",
+    "TURNSTILE_SECRET=test-turnstile-secret",
+    "FRONTEND_URL=http://localhost:3000",
+    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect"
 })
-
 class NeodentBackendApplicationTests {
 
 	@Test

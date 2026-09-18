@@ -50,9 +50,47 @@ public final class AppConstants {
         public static final String LOGIN_OTP = "login-otp";
         public static final String EMAIL_VERIFICATION = "email-verification";
         public static final String CITA_CONFIRMADA = "cita-confirmada";
+        public static final String CITA_REPROGRAMADA = "reprogramacion";
+        public static final String CITA_CANCELADA = "cancelacion";
         public static final String PASSWORD_RESET = "password-reset";
         public static final String ACCOUNT_ACTIVATION_OTP = "account-activation-otp";
-
+        
         private PlantillasEmail() {}
+    }
+
+    public static final class EstadosCita {
+        public static final String PROGRAMADA = "PROGRAMADA";
+        public static final String CONFIRMADA = "CONFIRMADA";
+        public static final String EN_ATENCION = "EN_ATENCION";
+        public static final String ATENDIDA = "ATENDIDA";
+        public static final String CANCELADA = "CANCELADA";
+        public static final String NO_ASISTIO = "NO_ASISTIO";
+
+        private EstadosCita() {}
+    }
+
+    public static final class Citas {
+        public static final int DURACION_DEFAULT_MINUTOS = 30;
+        public static final int INTERVALO_SLOTS_MINUTOS = 30;
+        public static final int HOLD_MINUTOS = 10;
+
+        private Citas() {}
+    }
+
+    public static final class Timezone {
+        public static final String AMERICA_LIMA = "America/Lima";
+
+        private Timezone() {}
+    }
+
+    public static final class AccionesHistorialCita {
+        public static final String REPROGRAMADA = "REPROGRAMADA";
+        public static final String CANCELADA = "CANCELADA";
+        public static final String NO_ASISTIO = "NO_ASISTIO";
+        public static final String CONFIRMADA = "CONFIRMADA";
+        public static final String EN_ATENCION = "EN_ATENCION";
+        public static final String ATENDIDA = "ATENDIDA";
+
+        private AccionesHistorialCita() {}
     }
 }

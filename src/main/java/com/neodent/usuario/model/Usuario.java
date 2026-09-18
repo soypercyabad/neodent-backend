@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "usuario")
@@ -19,35 +21,39 @@ public class Usuario {
     @Column(name = "id_usuario")
     private Long id;
 
-    @Column(name = "username", unique = true, length = 50)
-    private String username;
+    @Column(name = "alias_interno", unique = true, length = 50)
+    private String aliasInterno;
 
-    @Column(name = "email", nullable = false, unique = true, length = 120)
-    private String email;
+    @Column(name = "correo", nullable = false, unique = true, length = 120)
+    private String correo;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
-    private String passwordHash;
+    @Column(name = "hash_contrasena", nullable = false, length = 255)
+    private String hashContrasena;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_rol", nullable = false)
-    private Rol rol;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "usuario_rol",
+        joinColumns = @JoinColumn(name = "id_usuario"),
+        inverseJoinColumns = @JoinColumn(name = "id_rol")
+    )
+    private Set<Rol> roles = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_estado_usuario", nullable = false)
     private EstadoUsuario estado;
 
-    @Column(name = "two_factor_enabled", nullable = false)
-    private Boolean twoFactorEnabled;
+    @Column(name = "segundo_factor", nullable = false)
+    private Boolean segundoFactor;
 
-    @Column(name = "email_verificado", nullable = false)
-    private Boolean emailVerificado;
+    @Column(name = "correo_verificado", nullable = false)
+    private Boolean correoVerificado;
 
     @Column(name = "ultimo_login")
     private LocalDateTime ultimoLogin;
 
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "fecha_creacion", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
 
-    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "fecha_actualizacion", nullable = false, insertable = false, updatable = false)
+    private LocalDateTime fechaActualizacion;
 }

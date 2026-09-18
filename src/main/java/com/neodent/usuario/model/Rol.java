@@ -25,4 +25,17 @@ public class Rol {
 
     @Column(name = "activo", nullable = false)
     private Boolean activo;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Rol rol = (Rol) o;
+        return id != null && id.equals(rol.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

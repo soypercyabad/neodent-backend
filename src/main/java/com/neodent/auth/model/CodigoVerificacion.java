@@ -22,17 +22,17 @@ public class CodigoVerificacion {
     @JoinColumn(name = "id_usuario")
     private Usuario usuario;
 
-    @Column(name = "email_destino", nullable = false)
-    private String emailDestino;
+    @Column(name = "correo_destino", nullable = false)
+    private String correoDestino;
 
     @Column(nullable = false)
     private String tipo;
 
-    @Column(name = "codigo_hash", nullable = false)
-    private String codigoHash;
+    @Column(name = "hash_codigo", nullable = false)
+    private String hashCodigo;
 
-    @Column(name = "expires_at", nullable = false)
-    private LocalDateTime expiresAt;
+    @Column(name = "fecha_expiracion", nullable = false)
+    private LocalDateTime fechaExpiracion;
 
     @Column(nullable = false)
     private Short intentos = 0;
@@ -43,11 +43,14 @@ public class CodigoVerificacion {
     @Column(nullable = false)
     private Boolean usado = false;
 
-    @Column(name = "resend_count", nullable = false)
-    private Short resendCount = 0;
+    @Column(name = "num_reenvios", nullable = false)
+    private Short numReenvios = 0;
 
-    @Column(name = "last_resend_at")
-    private LocalDateTime lastResendAt;
+    @Column(name = "fecha_ultimo_reenvio")
+    private LocalDateTime fechaUltimoReenvio;
+
+    @Column(name = "fecha_creacion", insertable = false, updatable = false)
+    private LocalDateTime fechaCreacion;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_paciente")

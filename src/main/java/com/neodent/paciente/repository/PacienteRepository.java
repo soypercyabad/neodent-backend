@@ -13,39 +13,19 @@ public interface PacienteRepository
     @EntityGraph(attributePaths = "tipoDocumento")
     Optional<Paciente> findById(Long id);
 
-
     @EntityGraph(attributePaths = "tipoDocumento")
-    Optional<Paciente>
-        findByTipoDocumentoCodigoAndNumeroDocumento(
-            String codigo,
-            String numeroDocumento
-        );
+    Optional<Paciente> findByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
 
+    @EntityGraph(attributePaths = {"tipoDocumento","usuario"})
+    Optional<Paciente> findByUsuarioIdAndActivoTrue(Long usuarioId);
 
-    boolean existsByTipoDocumentoCodigoAndNumeroDocumento(
-        String codigo,
-        String numeroDocumento
-    );
+    boolean existsByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
 
+    boolean existsByCorreoIgnoreCase(String correo);
 
-    boolean existsByEmailIgnoreCase(
-        String email
-    );
+    boolean existsByTelefono(String telefono);
 
+    boolean existsByCorreoIgnoreCaseAndIdNot(String correo, Long id);
 
-    boolean existsByTelefono(
-        String telefono
-    );
-
-
-    boolean existsByEmailIgnoreCaseAndIdNot(
-        String email,
-        Long id
-    );
-
-
-    boolean existsByTelefonoAndIdNot(
-        String telefono,
-        Long id
-    );
+    boolean existsByTelefonoAndIdNot(String telefono, Long id);
 }

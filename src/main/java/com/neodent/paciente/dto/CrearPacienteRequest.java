@@ -13,69 +13,42 @@ import java.time.LocalDate;
 )
 public record CrearPacienteRequest(
 
-    @Schema(
-        description = "Código del tipo de documento",
-        example = "DNI"
-    )
+    @Schema(description = "Código del tipo de documento", example = "DNI")
     @NotBlank(message = "El tipo de documento es obligatorio")
     String tipoDocumento,
 
-    @Schema(
-        description = "Número de documento",
-        example = "74567891"
-    )
+    @Schema(description = "Número de documento", example = "74567891")
     @NotBlank(message = "El número de documento es obligatorio")
     @Size(max = 20)
     String numeroDocumento,
 
-    @Schema(
-        description = "Nombres del paciente",
-        example = "Lucia Maria"
-    )
+    @Schema(description = "Nombres del paciente", example = "Lucia Maria")
     @NotBlank(message = "Los nombres son obligatorios")
     @Size(max = 80)
     String nombres,
 
-    @Schema(
-        description = "Apellido paterno",
-        example = "Mendoza"
-    )
+    @Schema(description = "Apellido paterno", example = "Mendoza")
     @NotBlank(message = "El apellido paterno es obligatorio")
     @Size(max = 60)
     String apellidoPaterno,
 
-    @Schema(
-        description = "Apellido materno",
-        example = "Silva"
-    )
+    @Schema(description = "Apellido materno", example = "Silva")
     @Size(max = 60)
     String apellidoMaterno,
 
-    @Schema(
-        description = "Fecha de nacimiento",
-        example = "2001-04-12"
-    )
+    @Schema(description = "Fecha de nacimiento", example = "2001-04-12")
     LocalDate fechaNacimiento,
 
-    @Schema(
-        description = "Número telefónico",
-        example = "987123456"
-    )
+    @Schema(description = "Número telefónico", example = "987123456")
     @Size(max = 20)
     String telefono,
 
-    @Schema(
-        description = "Correo electrónico",
-        example = "lucia.mendoza@example.com"
-    )
+    @Schema(description = "Correo electrónico", example = "lucia.mendoza@example.com")
     @Email(message = "El correo electrónico no es válido")
     @Size(max = 120)
     String email,
 
-    @Schema(
-        description = "Dirección",
-        example = "Av. Grau 250, Piura"
-    )
+    @Schema(description = "Dirección", example = "Av. Grau 250, Piura")
     @Size(max = 255)
     String direccion
 

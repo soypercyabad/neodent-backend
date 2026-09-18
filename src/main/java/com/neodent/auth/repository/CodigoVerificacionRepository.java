@@ -11,10 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CodigoVerificacionRepository
         extends JpaRepository<CodigoVerificacion, Long> {
 
-    @EntityGraph(attributePaths = {
-        "usuario",
-        "usuario.rol"
-    })
+    @EntityGraph(attributePaths = {"usuario", "usuario.roles"})
     Optional<CodigoVerificacion> findByIdAndTipo(Long id, String tipo);
 
     Optional<CodigoVerificacion> findById(Long id);
