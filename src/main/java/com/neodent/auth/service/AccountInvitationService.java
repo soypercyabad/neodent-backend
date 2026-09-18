@@ -2,6 +2,8 @@ package com.neodent.auth.service;
 
 import com.neodent.auth.model.TokenAccion;
 import com.neodent.auth.repository.TokenAccionRepository;
+import com.neodent.notification.EmailService;
+import com.neodent.notification.dto.InvitacionCuentaEmailData;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.shared.constants.AppConstants;
@@ -33,6 +35,7 @@ public class AccountInvitationService {
     private final SecureRandom random = new SecureRandom();
     private final PacienteRepository pacienteRepository;
     private final Clock clock;
+    private final EmailService emailService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -127,5 +130,51 @@ public class AccountInvitationService {
             .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
         return generar(paciente);
+    }
+
+    @Transactional
+    public void reenviarInvitacion(Long pacienteId) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+            .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+
+        if (!Boolean.TRUE.equals(paciente.getActivo())) {
+            throw new ConflictException("No se puede enviar una invitación a un paciente inactivo");
+        }
+
+        if (paciente.getUsuario() != null) {
+            throw new ConflictException("El paciente ya tiene una cuenta asociada");
+        }
+
+        if (paciente.getCorreo() == null || paciente.getCorreo().isBlank()) {
+            throw new ConflictException("El paciente no tiene un correo registrado");
+        }
+
+        AccountInvitation invitacion = generar(paciente);
+
+        InvitacionCuentaEmailData data =
+            new InvitacionCuentaEmailData(
+                construirNombrePaciente(paciente),
+                invitacion.activationUrl()
+            );
+
+        emailService.enviarInvitacionCuenta(paciente.getCorreo(), data);
+    }
+
+    private String construirNombrePaciente(Paciente paciente) {
+        StringBuilder nombre = new StringBuilder();
+
+        if (paciente.getNombres() != null && !paciente.getNombres().isBlank()) {
+            nombre.append(paciente.getNombres().trim());
+        }
+
+        if (paciente.getApellidoPaterno() != null && !paciente.getApellidoPaterno().isBlank()) {
+            nombre.append(" ").append(paciente.getApellidoPaterno().trim());
+        }
+
+        if (paciente.getApellidoMaterno() != null && !paciente.getApellidoMaterno().isBlank()) {
+            nombre.append(" ").append(paciente.getApellidoMaterno().trim());
+        }
+
+        return nombre.toString().trim();
     }
 }

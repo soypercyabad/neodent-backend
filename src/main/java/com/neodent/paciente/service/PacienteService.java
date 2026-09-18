@@ -15,6 +15,8 @@ import com.neodent.usuario.model.Usuario;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -191,5 +193,25 @@ public class PacienteService {
             return null;
         }
         return email.trim().toLowerCase();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PacienteResponse> listar(
+        Boolean activo,
+        Boolean conCuenta,
+        String buscar,
+        Pageable pageable
+    ) {
+        String buscarNormalizado =
+            buscar == null || buscar.isBlank()
+                ? null
+                : buscar.trim();
+
+        return pacienteRepository.buscarPacientes(
+            activo,
+            conCuenta,
+            buscarNormalizado,
+            pageable
+        ).map(pacienteMapper::toResponse);
     }
 }
