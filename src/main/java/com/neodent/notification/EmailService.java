@@ -1,6 +1,8 @@
 package com.neodent.notification;
 
+import com.neodent.notification.dto.CitaCanceladaEmailData;
 import com.neodent.notification.dto.CitaConfirmadaEmailData;
+import com.neodent.notification.dto.CitaReprogramadaEmailData;
 
 public interface EmailService {
 
@@ -9,6 +11,10 @@ public interface EmailService {
     void enviarVerificacionEmail(String destinatario, String codigo);
 
     void enviarCitaConfirmada(String destinatario, CitaConfirmadaEmailData data);
+
+    void enviarCitaReprogramada(String destinatario, CitaReprogramadaEmailData data);
+
+    void enviarCitaCancelada(String destinatario, CitaCanceladaEmailData data);
 
     void enviarOtpActivacionCuenta(String destinatario, String codigo);
 

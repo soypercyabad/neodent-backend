@@ -1,6 +1,8 @@
 package com.neodent.notification;
 
+import com.neodent.notification.dto.CitaCanceladaEmailData;
 import com.neodent.notification.dto.CitaConfirmadaEmailData;
+import com.neodent.notification.dto.CitaReprogramadaEmailData;
 import com.neodent.shared.constants.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -112,5 +114,40 @@ public class BrevoEmailService implements EmailService {
         } catch (Exception ex) {
             log.error("Error al enviar correo a {} con asunto '{}': {}", destinatario, asunto, ex.getMessage());
         }
+    }
+
+    @Async("taskExecutor")
+    @Override
+    public void enviarCitaReprogramada(String destinatario, CitaReprogramadaEmailData data) {
+        Context context = new Context();
+        context.setVariable("nombrePaciente", data.nombrePaciente());
+        context.setVariable("fechaAnterior", data.fechaAnterior());
+        context.setVariable("horaAnterior", data.horaAnterior());
+        context.setVariable("fechaNueva", data.fechaNueva());
+        context.setVariable("horaNueva", data.horaNueva());
+        context.setVariable("odontologo", data.odontologo());
+        context.setVariable("especialidad", data.especialidad());
+        context.setVariable("sede", data.sede());
+        context.setVariable("motivo", data.motivo());
+        context.setVariable("ctaUrl", data.ctaUrl());
+
+        String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.CITA_REPROGRAMADA, context);
+        enviar(destinatario, "Tu cita fue reprogramada - NeoDent", html);
+    }
+
+    @Async("taskExecutor")
+    @Override
+    public void enviarCitaCancelada(String destinatario, CitaCanceladaEmailData data) {
+        Context context = new Context();
+        context.setVariable("nombrePaciente", data.nombrePaciente());
+        context.setVariable("fecha", data.fecha());
+        context.setVariable("hora", data.hora());
+        context.setVariable("odontologo", data.odontologo());
+        context.setVariable("especialidad", data.especialidad());
+        context.setVariable("sede", data.sede());
+        context.setVariable("motivo", data.motivo());
+
+        String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.CITA_CANCELADA, context);
+        enviar(destinatario, "Tu cita fue cancelada - NeoDent", html);
     }
 }

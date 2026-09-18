@@ -50,9 +50,11 @@ public final class AppConstants {
         public static final String LOGIN_OTP = "login-otp";
         public static final String EMAIL_VERIFICATION = "email-verification";
         public static final String CITA_CONFIRMADA = "cita-confirmada";
+        public static final String CITA_REPROGRAMADA = "reprogramacion";
+        public static final String CITA_CANCELADA = "cancelacion";
         public static final String PASSWORD_RESET = "password-reset";
         public static final String ACCOUNT_ACTIVATION_OTP = "account-activation-otp";
-
+        
         private PlantillasEmail() {}
     }
 

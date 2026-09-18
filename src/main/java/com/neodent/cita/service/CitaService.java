@@ -18,6 +18,8 @@ import com.neodent.cita.repository.HorarioOdontologoRepository;
 import com.neodent.cita.repository.ReservaCitaTemporalRepository;
 import com.neodent.notification.EmailService;
 import com.neodent.notification.dto.CitaConfirmadaEmailData;
+import com.neodent.notification.dto.CitaCanceladaEmailData;
+import com.neodent.notification.dto.CitaReprogramadaEmailData;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
@@ -104,7 +106,8 @@ public class CitaService {
             throw new ConflictException("El horario ya se encuentra ocupado");
         }
 
-        EstadoCita estadoProgramada = estadoCitaRepository.findByNombreAndActivoTrue(AppConstants.EstadosCita.PROGRAMADA)
+        EstadoCita estadoProgramada = estadoCitaRepository
+            .findByNombreAndActivoTrue(AppConstants.EstadosCita.PROGRAMADA)
             .orElseThrow(() -> new ResourceNotFoundException("Estado PROGRAMADA no configurado"));
 
         Cita cita = new Cita();
@@ -125,10 +128,17 @@ public class CitaService {
         try {
             enviarCorreoCita(citaGuardada);
         } catch (Exception ex) {
-            log.error("La cita {} fue registrada, pero no se pudo enviar el correo: {}", citaGuardada.getId(), ex.getMessage(), ex);
+            log.error(
+                "La cita {} fue registrada, pero no se pudo enviar el correo: {}",
+                citaGuardada.getId(),
+                ex.getMessage(),
+                ex
+            );
         }
 
-        Integer servicioId = citaGuardada.getServicioSolicitado() != null ? citaGuardada.getServicioSolicitado().getId() : null;
+        Integer servicioId = citaGuardada.getServicioSolicitado() != null
+            ? citaGuardada.getServicioSolicitado().getId()
+            : null;
 
         return new CitaResponse(
             citaGuardada.getId(),
@@ -211,17 +221,24 @@ public class CitaService {
 
         String estadoActual = cita.getEstado().getNombre();
 
-        if (!AppConstants.EstadosCita.PROGRAMADA.equals(estadoActual) && !AppConstants.EstadosCita.CONFIRMADA.equals(estadoActual)) {
+        if (!AppConstants.EstadosCita.PROGRAMADA.equals(estadoActual)
+            && !AppConstants.EstadosCita.CONFIRMADA.equals(estadoActual)) {
             throw new ConflictException("La cita no puede ser reprogramada en su estado actual");
         }
 
         LocalDateTime nuevoInicio = request.fechaHoraInicio();
 
+        if (nuevoInicio.equals(cita.getFechaHoraInicio())) {
+            throw new ConflictException("La nueva fecha y hora debe ser diferente a la actual");
+        }
+
         if (!nuevoInicio.isAfter(ahora)) {
             throw new ConflictException("La nueva fecha y hora debe ser futura");
         }
 
-        long duracion = Duration.between(cita.getFechaHoraInicio(), cita.getFechaHoraFin()).toMinutes();
+        long duracion = Duration
+            .between(cita.getFechaHoraInicio(), cita.getFechaHoraFin())
+            .toMinutes();
 
         if (duracion <= 0) {
             throw new ConflictException("La duración de la cita no es válida");
@@ -239,7 +256,9 @@ public class CitaService {
         );
 
         if (!dentroHorario) {
-            throw new ConflictException("El horario seleccionado está fuera del horario de atención del odontólogo");
+            throw new ConflictException(
+                "El horario seleccionado está fuera del horario de atención del odontólogo"
+            );
         }
 
         Long odontologoId = cita.getOdontologoEspecialidad().getOdontologo().getId();
@@ -255,13 +274,23 @@ public class CitaService {
             throw new ConflictException("El odontólogo no está disponible en ese horario");
         }
 
-        boolean existeCita = citaRepository.existeOtraCitaActivaEnHorario(citaId, odontologoId, nuevoInicio, nuevoFin);
+        boolean existeCita = citaRepository.existeOtraCitaActivaEnHorario(
+            citaId,
+            odontologoId,
+            nuevoInicio,
+            nuevoFin
+        );
 
         if (existeCita) {
             throw new ConflictException("El horario ya se encuentra ocupado");
         }
 
-        boolean existeHold = reservaRepository.existeReservaVigente(odontologoId, nuevoInicio, nuevoFin, ahora);
+        boolean existeHold = reservaRepository.existeReservaVigente(
+            odontologoId,
+            nuevoInicio,
+            nuevoFin,
+            ahora
+        );
 
         if (existeHold) {
             throw new ConflictException("El horario está siendo reservado por otro usuario");
@@ -270,7 +299,8 @@ public class CitaService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
 
-        EstadoCita estadoProgramada = estadoCitaRepository.findByNombreAndActivoTrue(AppConstants.EstadosCita.PROGRAMADA)
+        EstadoCita estadoProgramada = estadoCitaRepository
+            .findByNombreAndActivoTrue(AppConstants.EstadosCita.PROGRAMADA)
             .orElseThrow(() -> new ResourceNotFoundException("Estado PROGRAMADA no configurado"));
 
         LocalDateTime fechaAnterior = cita.getFechaHoraInicio();
@@ -296,12 +326,23 @@ public class CitaService {
         historialCitaRepository.save(historial);
 
         try {
-            enviarCorreoCita(citaGuardada);
+            enviarCorreoReprogramacion(
+                citaGuardada,
+                fechaAnterior,
+                request.motivo()
+            );
         } catch (Exception ex) {
-            log.error("La cita {} fue reprogramada, pero no se pudo enviar el correo: {}", citaGuardada.getId(), ex.getMessage(), ex);
+            log.error(
+                "La cita {} fue reprogramada, pero no se pudo enviar el correo: {}",
+                citaGuardada.getId(),
+                ex.getMessage(),
+                ex
+            );
         }
 
-        Integer servicioId = citaGuardada.getServicioSolicitado() != null ? citaGuardada.getServicioSolicitado().getId() : null;
+        Integer servicioId = citaGuardada.getServicioSolicitado() != null
+            ? citaGuardada.getServicioSolicitado().getId()
+            : null;
 
         return new CitaResponse(
             citaGuardada.getId(),
@@ -323,7 +364,8 @@ public class CitaService {
 
         String estadoActual = cita.getEstado().getNombre();
 
-        boolean cancelable = AppConstants.EstadosCita.PROGRAMADA.equals(estadoActual)
+        boolean cancelable =
+            AppConstants.EstadosCita.PROGRAMADA.equals(estadoActual)
             || AppConstants.EstadosCita.CONFIRMADA.equals(estadoActual);
 
         if (!cancelable) {
@@ -333,7 +375,8 @@ public class CitaService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
 
-        EstadoCita estadoCancelada = estadoCitaRepository.findByNombreAndActivoTrue(AppConstants.EstadosCita.CANCELADA)
+        EstadoCita estadoCancelada = estadoCitaRepository
+            .findByNombreAndActivoTrue(AppConstants.EstadosCita.CANCELADA)
             .orElseThrow(() -> new ResourceNotFoundException("Estado CANCELADA no configurado"));
 
         EstadoCita estadoAnterior = cita.getEstado();
@@ -356,7 +399,16 @@ public class CitaService {
 
         historialCitaRepository.save(historial);
 
-        Integer servicioId = citaGuardada.getServicioSolicitado() != null ? citaGuardada.getServicioSolicitado().getId() : null;
+        try {
+            enviarCorreoCancelacion(citaGuardada, fechaHoraAnterior, request.motivo());
+        } catch (Exception ex) {
+            log.error("La cita {} fue cancelada, pero no se pudo enviar el correo: {}",
+                citaGuardada.getId(), ex.getMessage(), ex);
+        }
+
+        Integer servicioId = citaGuardada.getServicioSolicitado() != null
+            ? citaGuardada.getServicioSolicitado().getId()
+            : null;
 
         return new CitaResponse(
             citaGuardada.getId(),
@@ -664,4 +716,59 @@ public class CitaService {
             })
             .toList();
     }
+    
+    private void enviarCorreoReprogramacion(Cita cita, LocalDateTime fechaAnterior, String motivo) {
+        Paciente paciente = cita.getPaciente();
+
+        if (paciente.getCorreo() == null || paciente.getCorreo().isBlank()) {
+            return;
+        }
+
+        var odontologoEspecialidad = cita.getOdontologoEspecialidad();
+        var personal = odontologoEspecialidad.getOdontologo().getPersonal();
+
+        DateTimeFormatter fecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter hora = DateTimeFormatter.ofPattern("hh:mm a");
+
+        CitaReprogramadaEmailData data = new CitaReprogramadaEmailData(
+            construirNombre(paciente.getNombres(), paciente.getApellidoPaterno(), paciente.getApellidoMaterno()),
+            fechaAnterior.format(fecha),
+            fechaAnterior.format(hora),
+            cita.getFechaHoraInicio().format(fecha),
+            cita.getFechaHoraInicio().format(hora),
+            construirNombre(personal.getNombres(), personal.getApellidoPaterno(), personal.getApellidoMaterno()),
+            odontologoEspecialidad.getEspecialidad().getNombre(),
+            cita.getSede().getNombre(),
+            motivo,
+            frontendUrl + "/login?redirect=/mis-citas"
+        );
+
+        emailService.enviarCitaReprogramada(paciente.getCorreo(), data);
+    }
+
+    private void enviarCorreoCancelacion(Cita cita, LocalDateTime fechaAnterior, String motivo) {
+        Paciente paciente = cita.getPaciente();
+
+        if (paciente.getCorreo() == null || paciente.getCorreo().isBlank()) {
+            return;
+        }
+
+        var odontologoEspecialidad = cita.getOdontologoEspecialidad();
+        var personal = odontologoEspecialidad.getOdontologo().getPersonal();
+
+        DateTimeFormatter fecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DateTimeFormatter hora = DateTimeFormatter.ofPattern("hh:mm a");
+
+        CitaCanceladaEmailData data = new CitaCanceladaEmailData(
+            construirNombre(paciente.getNombres(), paciente.getApellidoPaterno(), paciente.getApellidoMaterno()),
+            fechaAnterior.format(fecha),
+            fechaAnterior.format(hora),
+            construirNombre(personal.getNombres(), personal.getApellidoPaterno(), personal.getApellidoMaterno()),
+            odontologoEspecialidad.getEspecialidad().getNombre(),
+            cita.getSede().getNombre(),
+            motivo
+        );
+
+        emailService.enviarCitaCancelada(paciente.getCorreo(), data);
+}
 }
