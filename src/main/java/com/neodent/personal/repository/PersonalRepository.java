@@ -5,8 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface PersonalRepository
-    extends JpaRepository<Personal, Long> {
+public interface PersonalRepository extends JpaRepository<Personal, Long> {
+
+    Optional<Personal> findByUsuarioId(Long usuarioId);
 
     Optional<Personal> findByUsuarioIdAndActivoTrue(Long usuarioId);
+
+    boolean existsByTipoDocumentoIdAndNumeroDocumentoIgnoreCase(Integer tipoDocumentoId, String numeroDocumento);
+
+    boolean existsByTipoDocumentoIdAndNumeroDocumentoIgnoreCaseAndIdNot(Integer tipoDocumentoId, String numeroDocumento, Long id);
 }

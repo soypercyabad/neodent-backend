@@ -143,6 +143,13 @@ public class SecurityConfig {
                     AppConstants.Roles.RECEPCIONISTA
                 )
 
+                /* Usuarios internos */
+                .requestMatchers(
+                    "/api/usuarios-internos/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
                 /* Todo lo no definido explícitamente queda bloqueado.*/
                 .anyRequest().denyAll()
             )
