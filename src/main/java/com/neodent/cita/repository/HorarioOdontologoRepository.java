@@ -35,4 +35,30 @@ public interface HorarioOdontologoRepository
         Integer sedeId,
         Byte diaSemana
     );
+
+    List<HorarioOdontologo> findByActivoTrueOrderByDiaSemanaAscHoraInicioAsc();
+
+    List<HorarioOdontologo> findByOdontologoEspecialidadIdAndActivoTrueOrderByDiaSemanaAscHoraInicioAsc(
+        Long odontologoEspecialidadId
+    );
+
+    @Query("""
+        SELECT COUNT(h) > 0
+        FROM HorarioOdontologo h
+        WHERE h.odontologoEspecialidad.id = :odontologoEspecialidadId
+        AND h.sede.id = :sedeId
+        AND h.diaSemana = :diaSemana
+        AND h.activo = true
+        AND (:horarioId IS NULL OR h.id <> :horarioId)
+        AND h.horaInicio < :horaFin
+        AND h.horaFin > :horaInicio
+    """)
+    boolean existeCruceHorario(
+        Long horarioId,
+        Long odontologoEspecialidadId,
+        Integer sedeId,
+        Byte diaSemana,
+        LocalTime horaInicio,
+        LocalTime horaFin
+    );
 }

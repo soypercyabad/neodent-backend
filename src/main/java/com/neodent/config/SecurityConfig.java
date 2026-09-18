@@ -134,6 +134,15 @@ public class SecurityConfig {
                     AppConstants.Roles.RECEPCIONISTA
                 )
 
+                /* Horarios y bloqueos */
+                .requestMatchers(
+                    "/api/horarios/**",
+                    "/api/bloqueos/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA
+                )
+
                 /* Todo lo no definido explícitamente queda bloqueado.*/
                 .anyRequest().denyAll()
             )
