@@ -55,6 +55,7 @@ public final class AppConstants {
         public static final String PASSWORD_RESET = "password-reset";
         public static final String ACCOUNT_ACTIVATION_OTP = "account-activation-otp";
         public static final String BIENVENIDA_PERSONAL = "bienvenida-personal";
+        public static final String INVITACION_CUENTA = "invitacion-cuenta";
         
         private PlantillasEmail() {}
     }

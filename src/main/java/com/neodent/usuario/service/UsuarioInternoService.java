@@ -1,6 +1,7 @@
 package com.neodent.usuario.service;
 
 import com.neodent.auth.service.RefreshTokenService;
+import com.neodent.dni.DniService;
 import com.neodent.especialidad.model.Especialidad;
 import com.neodent.especialidad.model.OdontologoEspecialidad;
 import com.neodent.especialidad.repository.EspecialidadRepository;
@@ -19,6 +20,7 @@ import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.usuario.dto.request.ActualizarUsuarioInternoRequest;
 import com.neodent.usuario.dto.request.CrearUsuarioInternoRequest;
 import com.neodent.usuario.dto.response.UsuarioInternoResponse;
+import com.neodent.usuario.dto.response.VerificarDocumentoPersonalResponse;
 import com.neodent.usuario.model.EstadoUsuario;
 import com.neodent.usuario.model.Rol;
 import com.neodent.usuario.model.Usuario;
@@ -35,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +60,7 @@ public class UsuarioInternoService {
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final DniService dniService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -144,6 +148,15 @@ public class UsuarioInternoService {
         Long usuarioId,
         ActualizarUsuarioInternoRequest request
     ) {
+        return actualizar(usuarioId, request, null);
+    }
+
+    @Transactional
+    public UsuarioInternoResponse actualizar(
+        Long usuarioId,
+        ActualizarUsuarioInternoRequest request,
+        Long usuarioAutenticadoId
+    ) {
         Usuario usuario = obtenerUsuario(usuarioId);
 
         Personal personal = personalRepository.findByUsuarioId(usuarioId)
@@ -151,6 +164,20 @@ public class UsuarioInternoService {
 
         String correo = request.correo().trim().toLowerCase();
         Set<String> nombresRoles = normalizarRoles(request.roles());
+
+        Set<String> rolesActuales = usuario.getRoles().stream()
+            .map(Rol::getNombre)
+            .collect(Collectors.toSet());
+
+        boolean eraAdmin = rolesActuales.contains(AppConstants.Roles.ADMIN);
+        if (eraAdmin && !nombresRoles.contains(AppConstants.Roles.ADMIN)) {
+            if (usuarioAutenticadoId != null && usuarioId.equals(usuarioAutenticadoId)) {
+                throw new ConflictException("No puedes remover tu propio rol de administrador");
+            }
+            if (usuarioRepository.contarAdminsActivos() <= 1) {
+                throw new ConflictException("No se puede retirar el rol de administrador al único administrador activo del sistema");
+            }
+        }
 
         if (usuarioRepository.existsByCorreoIgnoreCaseAndIdNot(correo, usuarioId)) {
             throw new ConflictException("El correo ya se encuentra registrado");
@@ -171,10 +198,19 @@ public class UsuarioInternoService {
         usuario.setCorreo(correo);
         usuario.setCorreoVerificado(true);
 
-        if (request.nuevaContrasena() != null && !request.nuevaContrasena().isBlank()) {
+        boolean contrasenaCambio = request.nuevaContrasena() != null && !request.nuevaContrasena().isBlank();
+        boolean rolesCambiaron = !rolesActuales.equals(nombresRoles);
+
+        if (contrasenaCambio) {
+            if (request.nuevaContrasena().trim().length() < 8) {
+                throw new ConflictException("La nueva contraseña debe tener al menos 8 caracteres");
+            }
             usuario.setHashContrasena(
                 passwordEncoder.encode(request.nuevaContrasena())
             );
+        }
+
+        if (contrasenaCambio || rolesCambiaron) {
             refreshTokenService.revocarTodos(usuario.getId());
         }
 
@@ -254,7 +290,23 @@ public class UsuarioInternoService {
 
     @Transactional
     public UsuarioInternoResponse desactivar(Long usuarioId) {
+        return desactivar(usuarioId, null);
+    }
+
+    @Transactional
+    public UsuarioInternoResponse desactivar(Long usuarioId, Long usuarioAutenticadoId) {
+        if (usuarioAutenticadoId != null && usuarioId.equals(usuarioAutenticadoId)) {
+            throw new ConflictException("No puedes desactivar tu propia cuenta de administrador");
+        }
+
         Usuario usuario = obtenerUsuario(usuarioId);
+
+        boolean esAdmin = usuario.getRoles().stream()
+            .anyMatch(r -> AppConstants.Roles.ADMIN.equals(r.getNombre()));
+
+        if (esAdmin && usuarioRepository.contarAdminsActivos() <= 1) {
+            throw new ConflictException("No se puede desactivar al único administrador activo del sistema");
+        }
 
         Personal personal = personalRepository.findByUsuarioId(usuarioId)
             .orElseThrow(() -> new ResourceNotFoundException("Personal no encontrado"));
@@ -498,6 +550,77 @@ public class UsuarioInternoService {
             odontologo.map(Odontologo::getId).orElse(null),
             odontologo.map(Odontologo::getNumeroColegiatura).orElse(null),
             especialidades
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public VerificarDocumentoPersonalResponse verificarDocumento(
+        Integer tipoDocumentoId,
+        String numeroDocumento
+    ) {
+        String documento = numeroDocumento.trim();
+
+        if (personalRepository
+            .existsByTipoDocumentoIdAndNumeroDocumentoIgnoreCase(
+                tipoDocumentoId,
+                documento
+            )) {
+            throw new ConflictException(
+                "El documento ya se encuentra registrado como personal"
+            );
+        }
+
+        TipoDocumento tipoDocumento = tipoDocumentoRepository
+            .findByIdAndActivoTrue(tipoDocumentoId)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Tipo de documento no encontrado"
+                )
+            );
+
+        if (!"DNI".equalsIgnoreCase(tipoDocumento.getCodigo())) {
+            return new VerificarDocumentoPersonalResponse(
+                true,
+                false,
+                true,
+                null,
+                null,
+                null,
+                "Documento disponible. Complete los datos manualmente"
+            );
+        }
+
+        try {
+            var datos = dniService.buscarPorDni(documento);
+
+            if (datos == null) {
+                return respuestaManual();
+            }
+
+            return new VerificarDocumentoPersonalResponse(
+                true,
+                true,
+                false,
+                datos.nombres(),
+                datos.apellidoPaterno(),
+                datos.apellidoMaterno(),
+                "Documento disponible y datos encontrados"
+            );
+
+        } catch (Exception ex) {
+            return respuestaManual();
+        }
+    }
+
+    private VerificarDocumentoPersonalResponse respuestaManual() {
+        return new VerificarDocumentoPersonalResponse(
+            true,
+            false,
+            true,
+            null,
+            null,
+            null,
+            "No se pudieron obtener los datos. Complete el formulario manualmente"
         );
     }
 }

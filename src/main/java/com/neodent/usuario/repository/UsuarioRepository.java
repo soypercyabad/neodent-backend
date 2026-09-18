@@ -24,6 +24,16 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     boolean existsByAliasInternoIgnoreCase(String aliasInterno);
 
+    @Query("""
+        SELECT COUNT(DISTINCT u)
+        FROM Usuario u
+        JOIN u.roles r
+        WHERE r.nombre = 'ADMIN'
+        AND u.estado.nombre = 'ACTIVO'
+    """)
+    long contarAdminsActivos();
+
+    @EntityGraph(attributePaths = {"roles", "estado"})
     @Query(
         value = """
             SELECT u

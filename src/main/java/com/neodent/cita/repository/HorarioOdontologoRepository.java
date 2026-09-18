@@ -4,6 +4,7 @@ import com.neodent.cita.model.HorarioOdontologo;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -45,8 +46,7 @@ public interface HorarioOdontologoRepository
     @Query("""
         SELECT COUNT(h) > 0
         FROM HorarioOdontologo h
-        WHERE h.odontologoEspecialidad.id = :odontologoEspecialidadId
-        AND h.sede.id = :sedeId
+        WHERE h.odontologoEspecialidad.odontologo.id = :odontologoId
         AND h.diaSemana = :diaSemana
         AND h.activo = true
         AND (:horarioId IS NULL OR h.id <> :horarioId)
@@ -54,11 +54,10 @@ public interface HorarioOdontologoRepository
         AND h.horaFin > :horaInicio
     """)
     boolean existeCruceHorario(
-        Long horarioId,
-        Long odontologoEspecialidadId,
-        Integer sedeId,
-        Byte diaSemana,
-        LocalTime horaInicio,
-        LocalTime horaFin
+        @Param("horarioId") Long horarioId,
+        @Param("odontologoId") Long odontologoId,
+        @Param("diaSemana") Byte diaSemana,
+        @Param("horaInicio") LocalTime horaInicio,
+        @Param("horaFin") LocalTime horaFin
     );
 }

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bienvenido a NeoDent</title>
+    <title>Activa tu cuenta - NeoDent</title>
 </head>
 
 <body style="
@@ -23,7 +23,7 @@
     opacity: 0;
     color: transparent;
 ">
-    Tu cuenta de personal en NeoDent ha sido creada correctamente.
+    Activa tu cuenta en NeoDent y accede al portal de pacientes.
 </div>
 
 <!-- Contenedor general -->
@@ -103,6 +103,7 @@
                                     valign="middle"
                                     style="
                                         vertical-align: middle;
+                                        font-family: Arial, Helvetica, sans-serif;
                                         font-size: 30px;
                                         line-height: 36px;
                                         font-weight: bold;
@@ -153,7 +154,7 @@
                                     color: #047857;
                                 "
                             >
-                                CUENTA CREADA
+                                ACTIVA TU CUENTA
                             </span>
                         </div>
 
@@ -167,20 +168,20 @@
                                 color: #111827;
                             "
                         >
-                            ¡Bienvenido(a) a NeoDent!
+                            ¡Tu cuenta está casi lista!
                         </h2>
 
                         <!-- Subtítulo -->
                         <p
                             style="
-                                margin: 0 0 26px 0;
+                                margin: 0 0 28px 0;
                                 text-align: center;
                                 font-size: 15px;
                                 line-height: 1.6;
                                 color: #6b7280;
                             "
                         >
-                            Tu cuenta de acceso al sistema ha sido creada correctamente.
+                            Activa tu acceso al portal de pacientes de NeoDent.
                         </p>
 
                         <!-- Saludo -->
@@ -194,10 +195,10 @@
                         >
                             Hola
                             <strong
-                                th:text="${nombre}"
+                                th:text="${nombrePaciente}"
                                 style="color: #0f766e;"
                             >
-                                Usuario
+                                Paciente
                             </strong>,
                         </p>
 
@@ -209,14 +210,14 @@
                                 color: #4b5563;
                             "
                         >
-                            Tu cuenta de personal en
+                            Ya tienes un registro en
                             <strong style="color: #0f766e;">
                                 NeoDent
                             </strong>
-                            ya se encuentra disponible. A continuación puedes revisar tus datos de acceso.
+                            y puedes activar tu cuenta para acceder al portal de pacientes.
                         </p>
 
-                        <!-- DATOS DE LA CUENTA -->
+                        <!-- BENEFICIOS -->
                         <table
                             width="100%"
                             cellpadding="0"
@@ -244,9 +245,10 @@
                                             color: #0f766e;
                                         "
                                     >
-                                        Datos de acceso
+                                        Desde tu cuenta podrás
                                     </div>
 
+                                    <!-- Beneficio 1 -->
                                     <table
                                         width="100%"
                                         cellpadding="0"
@@ -254,137 +256,85 @@
                                         border="0"
                                         role="presentation"
                                     >
-
-                                        <!-- Correo -->
                                         <tr>
                                             <td
-                                                width="35%"
+                                                width="28"
+                                                valign="top"
                                                 style="
-                                                    padding: 11px 0;
-                                                    border-bottom: 1px solid #ccfbf1;
-                                                    font-size: 14px;
-                                                    color: #6b7280;
+                                                    padding: 6px 8px 6px 0;
+                                                    font-size: 18px;
+                                                    color: #0f766e;
                                                 "
                                             >
-                                                <strong>Correo</strong>
+                                                ✓
                                             </td>
 
                                             <td
-                                                align="right"
-                                                th:text="${correo}"
                                                 style="
-                                                    padding: 11px 0;
-                                                    border-bottom: 1px solid #ccfbf1;
+                                                    padding: 6px 0;
                                                     font-size: 14px;
-                                                    font-weight: bold;
-                                                    color: #111827;
-                                                    word-break: break-word;
+                                                    line-height: 1.6;
+                                                    color: #374151;
                                                 "
                                             >
-                                                usuario@neodent.com
+                                                Consultar tu programación de citas.
                                             </td>
                                         </tr>
 
-                                        <!-- Rol -->
                                         <tr>
                                             <td
+                                                width="28"
+                                                valign="top"
                                                 style="
-                                                    padding: 11px 0 0 0;
-                                                    font-size: 14px;
-                                                    color: #6b7280;
+                                                    padding: 6px 8px 6px 0;
+                                                    font-size: 18px;
+                                                    color: #0f766e;
                                                 "
                                             >
-                                                <strong>Rol</strong>
+                                                ✓
                                             </td>
 
                                             <td
-                                                align="right"
-                                                th:text="${roles}"
                                                 style="
-                                                    padding: 11px 0 0 0;
+                                                    padding: 6px 0;
                                                     font-size: 14px;
-                                                    font-weight: bold;
-                                                    color: #111827;
+                                                    line-height: 1.6;
+                                                    color: #374151;
                                                 "
                                             >
-                                                ODONTÓLOGO
+                                                Revisar la información disponible de tus atenciones.
                                             </td>
                                         </tr>
 
+                                        <tr>
+                                            <td
+                                                width="28"
+                                                valign="top"
+                                                style="
+                                                    padding: 6px 8px 6px 0;
+                                                    font-size: 18px;
+                                                    color: #0f766e;
+                                                "
+                                            >
+                                                ✓
+                                            </td>
+
+                                            <td
+                                                style="
+                                                    padding: 6px 0;
+                                                    font-size: 14px;
+                                                    line-height: 1.6;
+                                                    color: #374151;
+                                                "
+                                            >
+                                                Acceder a las funcionalidades habilitadas para pacientes.
+                                            </td>
+                                        </tr>
                                     </table>
 
                                 </td>
                             </tr>
                         </table>
-
-                        <!-- SEGURIDAD -->
-                        <div
-                            style="
-                                margin-top: 20px;
-                                padding: 18px;
-                                background-color: #fffbeb;
-                                border-left: 4px solid #f59e0b;
-                                border-radius: 6px;
-                            "
-                        >
-                            <p
-                                style="
-                                    margin: 0 0 8px 0;
-                                    font-size: 13px;
-                                    line-height: 1.6;
-                                    font-weight: bold;
-                                    color: #92400e;
-                                "
-                            >
-                                Información de seguridad
-                            </p>
-
-                            <p
-                                style="
-                                    margin: 0;
-                                    font-size: 13px;
-                                    line-height: 1.7;
-                                    color: #6b7280;
-                                "
-                            >
-                                Por seguridad, tu contraseña no se incluye en este correo.
-                                Utiliza la contraseña proporcionada por la administración para iniciar sesión.
-                            </p>
-                        </div>
-
-                        <!-- OTP -->
-                        <div
-                            style="
-                                margin-top: 16px;
-                                padding: 18px;
-                                background-color: #eff6ff;
-                                border-left: 4px solid #3b82f6;
-                                border-radius: 6px;
-                            "
-                        >
-                            <p
-                                style="
-                                    margin: 0 0 8px 0;
-                                    font-size: 13px;
-                                    line-height: 1.6;
-                                    font-weight: bold;
-                                    color: #1d4ed8;
-                                "
-                            >
-                                Verificación de acceso
-                            </p>
-
-                            <p
-                                style="
-                                    margin: 0;
-                                    font-size: 13px;
-                                    line-height: 1.7;
-                                    color: #6b7280;
-                                "
-                            >
-                                Al iniciar sesión recibirás un código de verificación en este mismo correo para completar tu acceso a NeoDent.
-                            </p>
-                        </div>
 
                         <!-- BOTÓN -->
                         <table
@@ -414,11 +364,11 @@
                                                 "
                                             >
                                                 <a
-                                                    th:href="${loginUrl}"
+                                                    th:href="${activationUrl}"
                                                     href="#"
                                                     style="
                                                         display: inline-block;
-                                                        padding: 14px 30px;
+                                                        padding: 14px 32px;
                                                         font-family: Arial, Helvetica, sans-serif;
                                                         font-size: 15px;
                                                         line-height: 20px;
@@ -429,7 +379,7 @@
                                                         border-radius: 8px;
                                                     "
                                                 >
-                                                    INGRESAR A NEODENT
+                                                    CREAR MI CUENTA
                                                 </a>
                                             </td>
                                         </tr>
@@ -439,19 +389,63 @@
                             </tr>
                         </table>
 
-                        <!-- Mensaje final -->
-                        <p
+                        <!-- Enlace temporal -->
+                        <div
                             style="
-                                margin: 28px 0 0 0;
-                                text-align: center;
-                                font-size: 13px;
-                                line-height: 1.6;
-                                color: #6b7280;
+                                margin-top: 28px;
+                                padding: 18px;
+                                background-color: #fffbeb;
+                                border-left: 4px solid #f59e0b;
+                                border-radius: 6px;
                             "
                         >
-                            Si tienes algún inconveniente para acceder,
-                            comunícate con la administración de NeoDent.
-                        </p>
+                            <p
+                                style="
+                                    margin: 0 0 7px 0;
+                                    font-size: 13px;
+                                    line-height: 1.6;
+                                    font-weight: bold;
+                                    color: #92400e;
+                                "
+                            >
+                                Este enlace es temporal
+                            </p>
+
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.7;
+                                    color: #6b7280;
+                                "
+                            >
+                                Si solicitaste un nuevo enlace de activación,
+                                los enlaces enviados anteriormente dejarán de funcionar.
+                            </p>
+                        </div>
+
+                        <!-- Seguridad -->
+                        <div
+                            style="
+                                margin-top: 16px;
+                                padding: 18px;
+                                background-color: #f9fafb;
+                                border-left: 4px solid #9ca3af;
+                                border-radius: 6px;
+                            "
+                        >
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.7;
+                                    color: #6b7280;
+                                "
+                            >
+                                Si no solicitaste esta activación o no reconoces este correo,
+                                puedes ignorarlo de forma segura.
+                            </p>
+                        </div>
 
                     </td>
                 </tr>

@@ -3,7 +3,9 @@ package com.neodent.usuario.controller;
 import com.neodent.shared.response.PaginaResponse;
 import com.neodent.usuario.dto.request.ActualizarUsuarioInternoRequest;
 import com.neodent.usuario.dto.request.CrearUsuarioInternoRequest;
+import com.neodent.usuario.dto.request.VerificarDocumentoPersonalRequest;
 import com.neodent.usuario.dto.response.UsuarioInternoResponse;
+import com.neodent.usuario.dto.response.VerificarDocumentoPersonalResponse;
 import com.neodent.usuario.service.UsuarioInternoService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,10 +19,10 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -135,9 +137,11 @@ public class UsuarioInternoController {
     @PutMapping("/{id}")
     public UsuarioInternoResponse actualizar(
         @PathVariable Long id,
-        @Valid @RequestBody ActualizarUsuarioInternoRequest request
+        @Valid @RequestBody ActualizarUsuarioInternoRequest request,
+        @AuthenticationPrincipal Jwt jwt
     ) {
-        return usuarioInternoService.actualizar(id, request);
+        Long usuarioAutenticadoId = Long.valueOf(jwt.getSubject());
+        return usuarioInternoService.actualizar(id, request, usuarioAutenticadoId);
     }
 
 
@@ -166,7 +170,31 @@ public class UsuarioInternoController {
         @ApiResponse(responseCode = "404", description = "Usuario interno no encontrado")
     })
     @PatchMapping("/{id}/desactivar")
-    public UsuarioInternoResponse desactivar(@PathVariable Long id) {
-        return usuarioInternoService.desactivar(id);
+    public UsuarioInternoResponse desactivar(
+        @PathVariable Long id,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        Long usuarioAutenticadoId = Long.valueOf(jwt.getSubject());
+        return usuarioInternoService.desactivar(id, usuarioAutenticadoId);
+    }
+
+
+    
+    @Operation(
+        summary = "Verificar documento personal",
+        description = "Verifica si un documento se encuentra disponible y si se puede obtener datos desde el DNI."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Documento verificado exitosamente"),
+        @ApiResponse(responseCode = "409", description = "Documento ya registrado como personal")
+    })
+    @PostMapping("/check-documento")
+    public VerificarDocumentoPersonalResponse verificarDocumento(
+        @Valid @RequestBody VerificarDocumentoPersonalRequest request
+    ) {
+        return usuarioInternoService.verificarDocumento(
+            request.tipoDocumentoId(),
+            request.numeroDocumento()
+        );
     }
 }

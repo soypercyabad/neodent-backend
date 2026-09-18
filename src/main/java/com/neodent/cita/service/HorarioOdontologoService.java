@@ -38,8 +38,7 @@ public class HorarioOdontologoService {
 
         boolean cruce = horarioRepository.existeCruceHorario(
             null,
-            request.odontologoEspecialidadId(),
-            request.sedeId(),
+            oe.getOdontologo().getId(),
             request.diaSemana(),
             request.horaInicio(),
             request.horaFin()
@@ -75,8 +74,7 @@ public class HorarioOdontologoService {
 
         boolean cruce = horarioRepository.existeCruceHorario(
             id,
-            request.odontologoEspecialidadId(),
-            request.sedeId(),
+            oe.getOdontologo().getId(),
             request.diaSemana(),
             request.horaInicio(),
             request.horaFin()

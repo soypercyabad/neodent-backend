@@ -6,7 +6,7 @@ import java.util.Set;
 
 public record ActualizarUsuarioInternoRequest(
     @NotBlank @Email String correo,
-    @Size(min = 8, max = 72) String nuevaContrasena,
+    @Size(max = 72) String nuevaContrasena,
     @NotEmpty Set<String> roles,
 
     @NotNull Integer tipoDocumentoId,
