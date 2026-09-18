@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cita programada - NeoDent</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+
+    <!-- Preheader -->
+    <div style="
+        display: none;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        color: transparent;
+    ">
+        Tu cita en NeoDent ha sido programada correctamente.
+    </div>
+
+    <!-- Contenedor general -->
+    <table
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
+        border="0"
+        role="presentation"
+        style="
+            width: 100%;
+            background-color: #f4f7fb;
+            padding: 40px 15px;
+        "
+    >
+        <tr>
+            <td align="center">
+
+                <!-- Tarjeta principal -->
+                <table
+                    width="100%"
+                    cellpadding="0"
+                    cellspacing="0"
+                    border="0"
+                    role="presentation"
+                    style="
+                        width: 100%;
+                        max-width: 560px;
+                        background-color: #ffffff;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+                    "
+                >
+
+                    <!-- ========================= -->
+                    <!-- HEADER -->
+                    <!-- ========================= -->
+                    <tr>
+                        <td
+                            align="center"
+                            style="
+                                background-color: #0f766e;
+                                padding: 26px 20px;
+                            "
+                        >
+
+                            <!-- Logo + NeoDent -->
+                            <table
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                role="presentation"
+                                style="margin: 0 auto;"
+                            >
+                                <tr>
+
+                                    <!-- Diente -->
+                                    <td
+                                        valign="middle"
+                                        style="
+                                            vertical-align: middle;
+                                            padding-right: 6px;
+                                        "
+                                    >
+                                        <img
+                                            src="https://www.svgrepo.com/show/484197/tooth.svg"
+                                            alt="NeoDent"
+                                            width="24"
+                                            height="24"
+                                            style="
+                                                display: block;
+                                                width: 24px;
+                                                height: 24px;
+                                                border: 0;
+                                            "
+                                        >
+                                    </td>
+
+                                    <!-- Nombre -->
+                                    <td
+                                        valign="middle"
+                                        style="
+                                            vertical-align: middle;
+                                            font-family: Arial, Helvetica, sans-serif;
+                                            font-size: 30px;
+                                            line-height: 36px;
+                                            font-weight: bold;
+                                            letter-spacing: 0.5px;
+                                            color: #ffffff;
+                                        "
+                                    >
+                                        NeoDent
+                                    </td>
+
+                                </tr>
+                            </table>
+
+                            <!-- Subtítulo -->
+                            <div
+                                style="
+                                    margin-top: 8px;
+                                    font-size: 14px;
+                                    line-height: 20px;
+                                    color: #ffffff;
+                                "
+                            >
+                                Cuidamos tu sonrisa
+                            </div>
+
+                        </td>
+                    </tr>
+
+                    <!-- ========================= -->
+                    <!-- CONTENIDO -->
+                    <!-- ========================= -->
+                    <tr>
+                        <td style="padding: 36px 32px;">
+
+                            <!-- Estado -->
+                            <div
+                                style="
+                                    text-align: center;
+                                    margin-bottom: 16px;
+                                "
+                            >
+                                <span
+                                    style="
+                                        display: inline-block;
+                                        padding: 6px 12px;
+                                        background-color: #ecfdf5;
+                                        border: 1px solid #a7f3d0;
+                                        border-radius: 20px;
+                                        font-size: 12px;
+                                        font-weight: bold;
+                                        color: #047857;
+                                    "
+                                >
+                                    CITA PROGRAMADA
+                                </span>
+                            </div>
+
+                            <!-- Título -->
+                            <h2
+                                style="
+                                    margin: 0 0 18px 0;
+                                    text-align: center;
+                                    font-size: 24px;
+                                    line-height: 32px;
+                                    color: #111827;
+                                "
+                            >
+                                ¡Tu cita está programada!
+                            </h2>
+
+                            <!-- Saludo -->
+                            <p
+                                style="
+                                    margin: 0 0 10px 0;
+                                    text-align: center;
+                                    font-size: 15px;
+                                    line-height: 1.6;
+                                    color: #4b5563;
+                                "
+                            >
+                                Hola
+                                <strong
+                                    th:text="${nombrePaciente}"
+                                    style="color: #0f766e;"
+                                >
+                                    Paciente
+                                </strong>,
+                            </p>
+
+                            <!-- Descripción -->
+                            <p
+                                style="
+                                    margin: 0 0 28px 0;
+                                    text-align: center;
+                                    font-size: 15px;
+                                    line-height: 1.6;
+                                    color: #4b5563;
+                                "
+                            >
+                                Tu cita en
+                                <strong style="color: #0f766e;">
+                                    NeoDent
+                                </strong>
+                                ha sido registrada correctamente.
+                                Usa el botón de abajo para continuar en NeoDent.
+                            </p>
+
+                            <!-- ========================= -->
+                            <!-- DATOS DE LA CITA -->
+                            <!-- ========================= -->
+                            <table
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                role="presentation"
+                                style="
+                                    width: 100%;
+                                    background-color: #f0fdfa;
+                                    border: 1px solid #99f6e4;
+                                    border-radius: 10px;
+                                "
+                            >
+                                <tr>
+                                    <td style="padding: 24px;">
+
+                                        <!-- Título del bloque -->
+                                        <div
+                                            style="
+                                                margin-bottom: 18px;
+                                                text-align: center;
+                                                font-size: 13px;
+                                                line-height: 18px;
+                                                font-weight: bold;
+                                                text-transform: uppercase;
+                                                letter-spacing: 1px;
+                                                color: #0f766e;
+                                            "
+                                        >
+                                            Detalles de tu cita
+                                        </div>
+
+                                        <!-- Fecha -->
+                                        <table
+                                            width="100%"
+                                            cellpadding="0"
+                                            cellspacing="0"
+                                            border="0"
+                                            role="presentation"
+                                        >
+                                            <tr>
+                                                <td
+                                                    width="40%"
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        color: #6b7280;
+                                                    "
+                                                >
+                                                    <strong>Fecha</strong>
+                                                </td>
+
+                                                <td
+                                                    align="right"
+                                                    th:text="${fecha}"
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        font-weight: bold;
+                                                        color: #111827;
+                                                    "
+                                                >
+                                                    12/09/2026
+                                                </td>
+                                            </tr>
+
+                                            <!-- Hora -->
+                                            <tr>
+                                                <td
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        color: #6b7280;
+                                                    "
+                                                >
+                                                    <strong>Hora</strong>
+                                                </td>
+
+                                                <td
+                                                    align="right"
+                                                    th:text="${hora}"
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        font-weight: bold;
+                                                        color: #111827;
+                                                    "
+                                                >
+                                                    10:00 AM
+                                                </td>
+                                            </tr>
+
+                                            <!-- Odontólogo -->
+                                            <tr>
+                                                <td
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        color: #6b7280;
+                                                    "
+                                                >
+                                                    <strong>Odontólogo</strong>
+                                                </td>
+
+                                                <td
+                                                    align="right"
+                                                    th:text="${odontologo}"
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        font-weight: bold;
+                                                        color: #111827;
+                                                    "
+                                                >
+                                                    Dr. Ejemplo
+                                                </td>
+                                            </tr>
+
+                                            <!-- Especialidad -->
+                                            <tr>
+                                                <td
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        color: #6b7280;
+                                                    "
+                                                >
+                                                    <strong>Especialidad</strong>
+                                                </td>
+
+                                                <td
+                                                    align="right"
+                                                    th:text="${especialidad}"
+                                                    style="
+                                                        padding: 10px 0;
+                                                        border-bottom: 1px solid #ccfbf1;
+                                                        font-size: 14px;
+                                                        font-weight: bold;
+                                                        color: #111827;
+                                                    "
+                                                >
+                                                    Odontología General
+                                                </td>
+                                            </tr>
+
+                                            <!-- Sede -->
+                                            <tr>
+                                                <td
+                                                    style="
+                                                        padding: 10px 0 0 0;
+                                                        font-size: 14px;
+                                                        color: #6b7280;
+                                                    "
+                                                >
+                                                    <strong>Sede</strong>
+                                                </td>
+
+                                                <td
+                                                    align="right"
+                                                    th:text="${sede}"
+                                                    style="
+                                                        padding: 10px 0 0 0;
+                                                        font-size: 14px;
+                                                        font-weight: bold;
+                                                        color: #111827;
+                                                    "
+                                                >
+                                                    NeoDent
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- ========================= -->
+                            <!-- BOTÓN -->
+                            <!-- ========================= -->
+                            <table
+                                width="100%"
+                                cellpadding="0"
+                                cellspacing="0"
+                                border="0"
+                                role="presentation"
+                                style="margin-top: 28px;"
+                            >
+                                <tr>
+                                    <td align="center">
+
+                                        <table
+                                            cellpadding="0"
+                                            cellspacing="0"
+                                            border="0"
+                                            role="presentation"
+                                        >
+                                            <tr>
+                                                <td
+                                                    align="center"
+                                                    bgcolor="#0f766e"
+                                                    style="
+                                                        border-radius: 8px;
+                                                        background-color: #0f766e;
+                                                    "
+                                                >
+                                                    <a
+                                                        th:href="${ctaUrl}"
+                                                        href="#"
+                                                        style="
+                                                            display: inline-block;
+                                                            padding: 14px 28px;
+                                                            font-family: Arial, Helvetica, sans-serif;
+                                                            font-size: 15px;
+                                                            line-height: 20px;
+                                                            font-weight: bold;
+                                                            color: #ffffff;
+                                                            text-decoration: none;
+                                                            background-color: #0f766e;
+                                                            border-radius: 8px;
+                                                        "
+                                                    >
+                                                        <span th:text="${ctaTexto}">
+                                                            Ver mi cita
+                                                        </span>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Información adicional -->
+                            <div
+                                style="
+                                    margin-top: 28px;
+                                    padding: 16px;
+                                    background-color: #f0fdf4;
+                                    border-left: 4px solid #10b981;
+                                    border-radius: 6px;
+                                "
+                            >
+                                <p
+                                    style="
+                                        margin: 0;
+                                        font-size: 13px;
+                                        line-height: 1.6;
+                                        color: #4b5563;
+                                    "
+                                >
+                                    Tu cita se encuentra registrada correctamente.
+                                    Puedes consultar sus detalles desde NeoDent cuando lo necesites.
+                                </p>
+                            </div>
+
+                            <!-- Recordatorio -->
+                            <div
+                                style="
+                                    margin-top: 18px;
+                                    padding: 16px;
+                                    background-color: #fff7ed;
+                                    border-left: 4px solid #f59e0b;
+                                    border-radius: 6px;
+                                "
+                            >
+                                <p
+                                    style="
+                                        margin: 0;
+                                        font-size: 13px;
+                                        line-height: 1.6;
+                                        color: #6b7280;
+                                    "
+                                >
+                                    Si necesitas realizar algún cambio en tu cita,
+                                    puedes comunicarte con NeoDent o acceder a tu cuenta para consultar las opciones disponibles.
+                                </p>
+                            </div>
+
+                        </td>
+                    </tr>
+
+                    <!-- ========================= -->
+                    <!-- FOOTER -->
+                    <!-- ========================= -->
+                    <tr>
+                        <td
+                            align="center"
+                            style="
+                                padding: 24px 20px;
+                                border-top: 1px solid #e5e7eb;
+                                background-color: #fafafa;
+                            "
+                        >
+
+                            <p
+                                style="
+                                    margin: 0 0 6px 0;
+                                    font-size: 13px;
+                                    color: #6b7280;
+                                "
+                            >
+                                © 2026 NeoDent
+                            </p>
+
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 12px;
+                                    line-height: 18px;
+                                    color: #9ca3af;
+                                "
+                            >
+                                Este es un correo automático.
+                                Por favor, no respondas a este mensaje.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

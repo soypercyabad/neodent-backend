@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activa tu cuenta - NeoDent</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+
+<!-- Preheader -->
+<div style="
+    display: none;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    color: transparent;
+">
+    Activa tu cuenta en NeoDent y accede al portal de pacientes.
+</div>
+
+<!-- Contenedor general -->
+<table
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+    role="presentation"
+    style="
+        width: 100%;
+        background-color: #f4f7fb;
+        padding: 40px 15px;
+    "
+>
+    <tr>
+        <td align="center">
+
+            <!-- Tarjeta principal -->
+            <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                border="0"
+                role="presentation"
+                style="
+                    width: 100%;
+                    max-width: 560px;
+                    background-color: #ffffff;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+                "
+            >
+
+                <!-- HEADER -->
+                <tr>
+                    <td
+                        align="center"
+                        style="
+                            background-color: #0f766e;
+                            padding: 28px 20px;
+                        "
+                    >
+
+                        <table
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            role="presentation"
+                            style="margin: 0 auto;"
+                        >
+                            <tr>
+
+                                <td
+                                    valign="middle"
+                                    style="
+                                        vertical-align: middle;
+                                        padding-right: 7px;
+                                    "
+                                >
+                                    <img
+                                        src="https://www.svgrepo.com/show/484197/tooth.svg"
+                                        alt="NeoDent"
+                                        width="25"
+                                        height="25"
+                                        style="
+                                            display: block;
+                                            width: 25px;
+                                            height: 25px;
+                                            border: 0;
+                                        "
+                                    >
+                                </td>
+
+                                <td
+                                    valign="middle"
+                                    style="
+                                        vertical-align: middle;
+                                        font-family: Arial, Helvetica, sans-serif;
+                                        font-size: 30px;
+                                        line-height: 36px;
+                                        font-weight: bold;
+                                        letter-spacing: 0.5px;
+                                        color: #ffffff;
+                                    "
+                                >
+                                    NeoDent
+                                </td>
+
+                            </tr>
+                        </table>
+
+                        <div
+                            style="
+                                margin-top: 8px;
+                                font-size: 14px;
+                                line-height: 20px;
+                                color: #ffffff;
+                            "
+                        >
+                            Cuidamos tu sonrisa
+                        </div>
+
+                    </td>
+                </tr>
+
+                <!-- CONTENIDO -->
+                <tr>
+                    <td style="padding: 36px 32px;">
+
+                        <!-- Estado -->
+                        <div
+                            style="
+                                text-align: center;
+                                margin-bottom: 16px;
+                            "
+                        >
+                            <span
+                                style="
+                                    display: inline-block;
+                                    padding: 6px 12px;
+                                    background-color: #ecfdf5;
+                                    border: 1px solid #a7f3d0;
+                                    border-radius: 20px;
+                                    font-size: 12px;
+                                    font-weight: bold;
+                                    color: #047857;
+                                "
+                            >
+                                ACTIVA TU CUENTA
+                            </span>
+                        </div>
+
+                        <!-- Título -->
+                        <h2
+                            style="
+                                margin: 0 0 12px 0;
+                                text-align: center;
+                                font-size: 25px;
+                                line-height: 34px;
+                                color: #111827;
+                            "
+                        >
+                            ¡Tu cuenta está casi lista!
+                        </h2>
+
+                        <!-- Subtítulo -->
+                        <p
+                            style="
+                                margin: 0 0 28px 0;
+                                text-align: center;
+                                font-size: 15px;
+                                line-height: 1.6;
+                                color: #6b7280;
+                            "
+                        >
+                            Activa tu acceso al portal de pacientes de NeoDent.
+                        </p>
+
+                        <!-- Saludo -->
+                        <p
+                            style="
+                                margin: 0 0 18px 0;
+                                font-size: 15px;
+                                line-height: 1.7;
+                                color: #4b5563;
+                            "
+                        >
+                            Hola
+                            <strong
+                                th:text="${nombrePaciente}"
+                                style="color: #0f766e;"
+                            >
+                                Paciente
+                            </strong>,
+                        </p>
+
+                        <p
+                            style="
+                                margin: 0 0 26px 0;
+                                font-size: 15px;
+                                line-height: 1.7;
+                                color: #4b5563;
+                            "
+                        >
+                            Ya tienes un registro en
+                            <strong style="color: #0f766e;">
+                                NeoDent
+                            </strong>
+                            y puedes activar tu cuenta para acceder al portal de pacientes.
+                        </p>
+
+                        <!-- BENEFICIOS -->
+                        <table
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            role="presentation"
+                            style="
+                                width: 100%;
+                                background-color: #f0fdfa;
+                                border: 1px solid #99f6e4;
+                                border-radius: 10px;
+                            "
+                        >
+                            <tr>
+                                <td style="padding: 24px;">
+
+                                    <div
+                                        style="
+                                            margin-bottom: 18px;
+                                            text-align: center;
+                                            font-size: 13px;
+                                            font-weight: bold;
+                                            text-transform: uppercase;
+                                            letter-spacing: 1px;
+                                            color: #0f766e;
+                                        "
+                                    >
+                                        Desde tu cuenta podrás
+                                    </div>
+
+                                    <!-- Beneficio 1 -->
+                                    <table
+                                        width="100%"
+                                        cellpadding="0"
+                                        cellspacing="0"
+                                        border="0"
+                                        role="presentation"
+                                    >
+                                        <tr>
+                                            <td
+                                                width="28"
+                                                valign="top"
+                                                style="
+                                                    padding: 6px 8px 6px 0;
+                                                    font-size: 18px;
+                                                    color: #0f766e;
+                                                "
+                                            >
+                                                ✓
+                                            </td>
+
+                                            <td
+                                                style="
+                                                    padding: 6px 0;
+                                                    font-size: 14px;
+                                                    line-height: 1.6;
+                                                    color: #374151;
+                                                "
+                                            >
+                                                Consultar tu programación de citas.
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td
+                                                width="28"
+                                                valign="top"
+                                                style="
+                                                    padding: 6px 8px 6px 0;
+                                                    font-size: 18px;
+                                                    color: #0f766e;
+                                                "
+                                            >
+                                                ✓
+                                            </td>
+
+                                            <td
+                                                style="
+                                                    padding: 6px 0;
+                                                    font-size: 14px;
+                                                    line-height: 1.6;
+                                                    color: #374151;
+                                                "
+                                            >
+                                                Revisar la información disponible de tus atenciones.
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td
+                                                width="28"
+                                                valign="top"
+                                                style="
+                                                    padding: 6px 8px 6px 0;
+                                                    font-size: 18px;
+                                                    color: #0f766e;
+                                                "
+                                            >
+                                                ✓
+                                            </td>
+
+                                            <td
+                                                style="
+                                                    padding: 6px 0;
+                                                    font-size: 14px;
+                                                    line-height: 1.6;
+                                                    color: #374151;
+                                                "
+                                            >
+                                                Acceder a las funcionalidades habilitadas para pacientes.
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- BOTÓN -->
+                        <table
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            role="presentation"
+                            style="margin-top: 30px;"
+                        >
+                            <tr>
+                                <td align="center">
+
+                                    <table
+                                        cellpadding="0"
+                                        cellspacing="0"
+                                        border="0"
+                                        role="presentation"
+                                    >
+                                        <tr>
+                                            <td
+                                                align="center"
+                                                bgcolor="#0f766e"
+                                                style="
+                                                    border-radius: 8px;
+                                                    background-color: #0f766e;
+                                                "
+                                            >
+                                                <a
+                                                    th:href="${activationUrl}"
+                                                    href="#"
+                                                    style="
+                                                        display: inline-block;
+                                                        padding: 14px 32px;
+                                                        font-family: Arial, Helvetica, sans-serif;
+                                                        font-size: 15px;
+                                                        line-height: 20px;
+                                                        font-weight: bold;
+                                                        color: #ffffff;
+                                                        text-decoration: none;
+                                                        background-color: #0f766e;
+                                                        border-radius: 8px;
+                                                    "
+                                                >
+                                                    CREAR MI CUENTA
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Enlace temporal -->
+                        <div
+                            style="
+                                margin-top: 28px;
+                                padding: 18px;
+                                background-color: #fffbeb;
+                                border-left: 4px solid #f59e0b;
+                                border-radius: 6px;
+                            "
+                        >
+                            <p
+                                style="
+                                    margin: 0 0 7px 0;
+                                    font-size: 13px;
+                                    line-height: 1.6;
+                                    font-weight: bold;
+                                    color: #92400e;
+                                "
+                            >
+                                Este enlace es temporal
+                            </p>
+
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.7;
+                                    color: #6b7280;
+                                "
+                            >
+                                Si solicitaste un nuevo enlace de activación,
+                                los enlaces enviados anteriormente dejarán de funcionar.
+                            </p>
+                        </div>
+
+                        <!-- Seguridad -->
+                        <div
+                            style="
+                                margin-top: 16px;
+                                padding: 18px;
+                                background-color: #f9fafb;
+                                border-left: 4px solid #9ca3af;
+                                border-radius: 6px;
+                            "
+                        >
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.7;
+                                    color: #6b7280;
+                                "
+                            >
+                                Si no solicitaste esta activación o no reconoces este correo,
+                                puedes ignorarlo de forma segura.
+                            </p>
+                        </div>
+
+                    </td>
+                </tr>
+
+                <!-- FOOTER -->
+                <tr>
+                    <td
+                        align="center"
+                        style="
+                            padding: 24px 20px;
+                            border-top: 1px solid #e5e7eb;
+                            background-color: #fafafa;
+                        "
+                    >
+
+                        <p
+                            style="
+                                margin: 0 0 6px 0;
+                                font-size: 13px;
+                                color: #6b7280;
+                            "
+                        >
+                            © 2026 NeoDent
+                        </p>
+
+                        <p
+                            style="
+                                margin: 0;
+                                font-size: 12px;
+                                line-height: 18px;
+                                color: #9ca3af;
+                            "
+                        >
+                            Este es un correo automático.
+                            Por favor, no respondas a este mensaje.
+                        </p>
+
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
