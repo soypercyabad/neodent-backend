@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface TipoDocumentoRepository extends JpaRepository<TipoDocumento, Integer> {
 
     Optional<TipoDocumento> findByCodigoAndActivoTrue(String codigo);
+
+    Optional<TipoDocumento> findByIdAndActivoTrue(Integer id);
 }

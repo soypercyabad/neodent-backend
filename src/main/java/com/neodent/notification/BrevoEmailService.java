@@ -1,8 +1,10 @@
 package com.neodent.notification;
 
+import com.neodent.notification.dto.BienvenidaPersonalEmailData;
 import com.neodent.notification.dto.CitaCanceladaEmailData;
 import com.neodent.notification.dto.CitaConfirmadaEmailData;
 import com.neodent.notification.dto.CitaReprogramadaEmailData;
+import com.neodent.notification.dto.InvitacionCuentaEmailData;
 import com.neodent.shared.constants.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -149,5 +151,29 @@ public class BrevoEmailService implements EmailService {
 
         String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.CITA_CANCELADA, context);
         enviar(destinatario, "Tu cita fue cancelada - NeoDent", html);
+    }
+
+    @Async("taskExecutor")
+    @Override
+    public void enviarBienvenidaPersonal(String destinatario, BienvenidaPersonalEmailData data) {
+        Context context = new Context();
+        context.setVariable("nombre", data.nombre());
+        context.setVariable("correo", data.correo());
+        context.setVariable("roles", String.join(", ", data.roles()));
+        context.setVariable("loginUrl", data.loginUrl());
+
+        String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.BIENVENIDA_PERSONAL, context);
+        enviar(destinatario, "Bienvenido(a) a NeoDent", html);
+    }
+
+    @Async("taskExecutor")
+    @Override
+    public void enviarInvitacionCuenta(String destinatario, InvitacionCuentaEmailData data) {
+        Context context = new Context();
+        context.setVariable("nombrePaciente", data.nombrePaciente());
+        context.setVariable("activationUrl", data.activationUrl());
+
+        String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.INVITACION_CUENTA, context);
+        enviar(destinatario, "Activa tu cuenta en NeoDent", html);
     }
 }

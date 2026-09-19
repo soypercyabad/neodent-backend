@@ -10,6 +10,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -71,6 +76,44 @@ public class GlobalExceptionHandler {
             ex.getMessage()
         );
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
+        ApiError error = new ApiError(HttpStatus.FORBIDDEN.value(), "Forbidden", "No tienes permisos para realizar esta acción");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleNotReadable(HttpMessageNotReadableException ex) {
+        ApiError error = new ApiError(
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            "El cuerpo de la solicitud no es válido o está mal formado"
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String mensaje = String.format("El parámetro '%s' tiene un tipo o formato no válido", ex.getName());
+        ApiError error = new ApiError(
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            mensaje
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParam(MissingServletRequestParameterException ex) {
+        String mensaje = String.format("El parámetro obligatorio '%s' no fue proporcionado", ex.getParameterName());
+        ApiError error = new ApiError(
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            mensaje
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(Exception.class)

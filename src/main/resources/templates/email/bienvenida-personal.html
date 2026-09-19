@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cita cancelada - NeoDent</title>
+    <title>Bienvenido a NeoDent</title>
 </head>
 
 <body style="
@@ -23,7 +23,7 @@
     opacity: 0;
     color: transparent;
 ">
-    Tu cita en NeoDent ha sido cancelada.
+    Tu cuenta de personal en NeoDent ha sido creada correctamente.
 </div>
 
 <!-- Contenedor general -->
@@ -65,7 +65,7 @@
                         align="center"
                         style="
                             background-color: #0f766e;
-                            padding: 26px 20px;
+                            padding: 28px 20px;
                         "
                     >
 
@@ -82,18 +82,18 @@
                                     valign="middle"
                                     style="
                                         vertical-align: middle;
-                                        padding-right: 6px;
+                                        padding-right: 7px;
                                     "
                                 >
                                     <img
                                         src="https://www.svgrepo.com/show/484197/tooth.svg"
                                         alt="NeoDent"
-                                        width="24"
-                                        height="24"
+                                        width="25"
+                                        height="25"
                                         style="
                                             display: block;
-                                            width: 24px;
-                                            height: 24px;
+                                            width: 25px;
+                                            height: 25px;
                                             border: 0;
                                         "
                                     >
@@ -103,7 +103,6 @@
                                     valign="middle"
                                     style="
                                         vertical-align: middle;
-                                        font-family: Arial, Helvetica, sans-serif;
                                         font-size: 30px;
                                         line-height: 36px;
                                         font-weight: bold;
@@ -146,68 +145,78 @@
                                 style="
                                     display: inline-block;
                                     padding: 6px 12px;
-                                    background-color: #fef2f2;
-                                    border: 1px solid #fecaca;
+                                    background-color: #ecfdf5;
+                                    border: 1px solid #a7f3d0;
                                     border-radius: 20px;
                                     font-size: 12px;
                                     font-weight: bold;
-                                    color: #b91c1c;
+                                    color: #047857;
                                 "
                             >
-                                CITA CANCELADA
+                                CUENTA CREADA
                             </span>
                         </div>
 
                         <!-- Título -->
                         <h2
                             style="
-                                margin: 0 0 18px 0;
+                                margin: 0 0 12px 0;
                                 text-align: center;
-                                font-size: 24px;
-                                line-height: 32px;
+                                font-size: 25px;
+                                line-height: 34px;
                                 color: #111827;
                             "
                         >
-                            Tu cita fue cancelada
+                            ¡Bienvenido(a) a NeoDent!
                         </h2>
+
+                        <!-- Subtítulo -->
+                        <p
+                            style="
+                                margin: 0 0 26px 0;
+                                text-align: center;
+                                font-size: 15px;
+                                line-height: 1.6;
+                                color: #6b7280;
+                            "
+                        >
+                            Tu cuenta de acceso al sistema ha sido creada correctamente.
+                        </p>
 
                         <!-- Saludo -->
                         <p
                             style="
-                                margin: 0 0 10px 0;
-                                text-align: center;
+                                margin: 0 0 18px 0;
                                 font-size: 15px;
-                                line-height: 1.6;
+                                line-height: 1.7;
                                 color: #4b5563;
                             "
                         >
                             Hola
                             <strong
-                                th:text="${nombrePaciente}"
+                                th:text="${nombre}"
                                 style="color: #0f766e;"
                             >
-                                Paciente
+                                Usuario
                             </strong>,
                         </p>
 
-                        <!-- Descripción -->
                         <p
                             style="
-                                margin: 0 0 28px 0;
-                                text-align: center;
+                                margin: 0 0 26px 0;
                                 font-size: 15px;
-                                line-height: 1.6;
+                                line-height: 1.7;
                                 color: #4b5563;
                             "
                         >
-                            La siguiente cita registrada en
+                            Tu cuenta de personal en
                             <strong style="color: #0f766e;">
                                 NeoDent
                             </strong>
-                            ha sido cancelada.
+                            ya se encuentra disponible. A continuación puedes revisar tus datos de acceso.
                         </p>
 
-                        <!-- DATOS DE LA CITA -->
+                        <!-- DATOS DE LA CUENTA -->
                         <table
                             width="100%"
                             cellpadding="0"
@@ -216,8 +225,8 @@
                             role="presentation"
                             style="
                                 width: 100%;
-                                background-color: #fef2f2;
-                                border: 1px solid #fecaca;
+                                background-color: #f0fdfa;
+                                border: 1px solid #99f6e4;
                                 border-radius: 10px;
                             "
                         >
@@ -232,10 +241,10 @@
                                             font-weight: bold;
                                             text-transform: uppercase;
                                             letter-spacing: 1px;
-                                            color: #b91c1c;
+                                            color: #0f766e;
                                         "
                                     >
-                                        Detalles de la cita cancelada
+                                        Datos de acceso
                                     </div>
 
                                     <table
@@ -246,142 +255,59 @@
                                         role="presentation"
                                     >
 
-                                        <!-- Fecha -->
+                                        <!-- Correo -->
                                         <tr>
                                             <td
-                                                width="40%"
+                                                width="35%"
                                                 style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
+                                                    padding: 11px 0;
+                                                    border-bottom: 1px solid #ccfbf1;
                                                     font-size: 14px;
                                                     color: #6b7280;
                                                 "
                                             >
-                                                <strong>Fecha</strong>
+                                                <strong>Correo</strong>
                                             </td>
 
                                             <td
                                                 align="right"
-                                                th:text="${fecha}"
+                                                th:text="${correo}"
                                                 style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
+                                                    padding: 11px 0;
+                                                    border-bottom: 1px solid #ccfbf1;
                                                     font-size: 14px;
                                                     font-weight: bold;
                                                     color: #111827;
+                                                    word-break: break-word;
                                                 "
                                             >
-                                                01/01/2026
+                                                usuario@neodent.com
                                             </td>
                                         </tr>
 
-                                        <!-- Hora -->
+                                        <!-- Rol -->
                                         <tr>
                                             <td
                                                 style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
+                                                    padding: 11px 0 0 0;
                                                     font-size: 14px;
                                                     color: #6b7280;
                                                 "
                                             >
-                                                <strong>Hora</strong>
+                                                <strong>Rol</strong>
                                             </td>
 
                                             <td
                                                 align="right"
-                                                th:text="${hora}"
+                                                th:text="${roles}"
                                                 style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
+                                                    padding: 11px 0 0 0;
                                                     font-size: 14px;
                                                     font-weight: bold;
                                                     color: #111827;
                                                 "
                                             >
-                                                09:00 AM
-                                            </td>
-                                        </tr>
-
-                                        <!-- Odontólogo -->
-                                        <tr>
-                                            <td
-                                                style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
-                                                    font-size: 14px;
-                                                    color: #6b7280;
-                                                "
-                                            >
-                                                <strong>Odontólogo</strong>
-                                            </td>
-
-                                            <td
-                                                align="right"
-                                                th:text="${odontologo}"
-                                                style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
-                                                    font-size: 14px;
-                                                    font-weight: bold;
-                                                    color: #111827;
-                                                "
-                                            >
-                                                Dr. Ejemplo
-                                            </td>
-                                        </tr>
-
-                                        <!-- Especialidad -->
-                                        <tr>
-                                            <td
-                                                style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
-                                                    font-size: 14px;
-                                                    color: #6b7280;
-                                                "
-                                            >
-                                                <strong>Especialidad</strong>
-                                            </td>
-
-                                            <td
-                                                align="right"
-                                                th:text="${especialidad}"
-                                                style="
-                                                    padding: 10px 0;
-                                                    border-bottom: 1px solid #fee2e2;
-                                                    font-size: 14px;
-                                                    font-weight: bold;
-                                                    color: #111827;
-                                                "
-                                            >
-                                                Odontología General
-                                            </td>
-                                        </tr>
-
-                                        <!-- Sede -->
-                                        <tr>
-                                            <td
-                                                style="
-                                                    padding: 10px 0 0 0;
-                                                    font-size: 14px;
-                                                    color: #6b7280;
-                                                "
-                                            >
-                                                <strong>Sede</strong>
-                                            </td>
-
-                                            <td
-                                                align="right"
-                                                th:text="${sede}"
-                                                style="
-                                                    padding: 10px 0 0 0;
-                                                    font-size: 14px;
-                                                    font-weight: bold;
-                                                    color: #111827;
-                                                "
-                                            >
-                                                NeoDent
+                                                ODONTÓLOGO
                                             </td>
                                         </tr>
 
@@ -391,56 +317,141 @@
                             </tr>
                         </table>
 
-                        <!-- MOTIVO -->
+                        <!-- SEGURIDAD -->
                         <div
-                            th:if="${motivo != null and !motivo.isBlank()}"
                             style="
-                                margin-top: 18px;
-                                padding: 16px;
-                                background-color: #fff7ed;
+                                margin-top: 20px;
+                                padding: 18px;
+                                background-color: #fffbeb;
                                 border-left: 4px solid #f59e0b;
                                 border-radius: 6px;
                             "
                         >
                             <p
                                 style="
-                                    margin: 0;
+                                    margin: 0 0 8px 0;
                                     font-size: 13px;
                                     line-height: 1.6;
+                                    font-weight: bold;
+                                    color: #92400e;
+                                "
+                            >
+                                Información de seguridad
+                            </p>
+
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.7;
                                     color: #6b7280;
                                 "
                             >
-                                <strong style="color: #92400e;">
-                                    Motivo:
-                                </strong>
-                                <span th:text="${motivo}">
-                                    Cancelación solicitada
-                                </span>
+                                Por seguridad, tu contraseña no se incluye en este correo.
+                                Utiliza la contraseña proporcionada por la administración para iniciar sesión.
                             </p>
                         </div>
 
-                        <!-- Información adicional -->
+                        <!-- OTP -->
                         <div
                             style="
-                                margin-top: 28px;
-                                padding: 16px;
-                                background-color: #f0fdf4;
-                                border-left: 4px solid #10b981;
+                                margin-top: 16px;
+                                padding: 18px;
+                                background-color: #eff6ff;
+                                border-left: 4px solid #3b82f6;
                                 border-radius: 6px;
                             "
                         >
                             <p
                                 style="
-                                    margin: 0;
+                                    margin: 0 0 8px 0;
                                     font-size: 13px;
                                     line-height: 1.6;
-                                    color: #4b5563;
+                                    font-weight: bold;
+                                    color: #1d4ed8;
                                 "
                             >
-                                Si deseas programar una nueva cita,
-                                puedes ingresar nuevamente a NeoDent y consultar los horarios disponibles.
+                                Verificación de acceso
+                            </p>
+
+                            <p
+                                style="
+                                    margin: 0;
+                                    font-size: 13px;
+                                    line-height: 1.7;
+                                    color: #6b7280;
+                                "
+                            >
+                                Al iniciar sesión recibirás un código de verificación en este mismo correo para completar tu acceso a NeoDent.
                             </p>
                         </div>
+
+                        <!-- BOTÓN -->
+                        <table
+                            width="100%"
+                            cellpadding="0"
+                            cellspacing="0"
+                            border="0"
+                            role="presentation"
+                            style="margin-top: 30px;"
+                        >
+                            <tr>
+                                <td align="center">
+
+                                    <table
+                                        cellpadding="0"
+                                        cellspacing="0"
+                                        border="0"
+                                        role="presentation"
+                                    >
+                                        <tr>
+                                            <td
+                                                align="center"
+                                                bgcolor="#0f766e"
+                                                style="
+                                                    border-radius: 8px;
+                                                    background-color: #0f766e;
+                                                "
+                                            >
+                                                <a
+                                                    th:href="${loginUrl}"
+                                                    href="#"
+                                                    style="
+                                                        display: inline-block;
+                                                        padding: 14px 30px;
+                                                        font-family: Arial, Helvetica, sans-serif;
+                                                        font-size: 15px;
+                                                        line-height: 20px;
+                                                        font-weight: bold;
+                                                        color: #ffffff;
+                                                        text-decoration: none;
+                                                        background-color: #0f766e;
+                                                        border-radius: 8px;
+                                                    "
+                                                >
+                                                    INGRESAR A NEODENT
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Mensaje final -->
+                        <p
+                            style="
+                                margin: 28px 0 0 0;
+                                text-align: center;
+                                font-size: 13px;
+                                line-height: 1.6;
+                                color: #6b7280;
+                            "
+                        >
+                            Si tienes algún inconveniente para acceder,
+                            comunícate con la administración de NeoDent.
+                        </p>
 
                     </td>
                 </tr>

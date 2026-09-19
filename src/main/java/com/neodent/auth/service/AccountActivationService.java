@@ -5,6 +5,7 @@ import com.neodent.auth.dto.request.StartAccountActivationRequest;
 import com.neodent.auth.dto.response.AccountInvitationResponse;
 import com.neodent.auth.dto.response.CompleteAccountActivationResponse;
 import com.neodent.auth.dto.response.StartAccountActivationResponse;
+import com.neodent.notification.EmailService;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.shared.constants.AppConstants;
@@ -34,6 +35,7 @@ public class AccountActivationService {
     private final EstadoUsuarioRepository estadoUsuarioRepository;
     private final PacienteRepository pacienteRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public AccountInvitationResponse validar(String token) {
         Paciente paciente = accountInvitationService.validarToken(token);

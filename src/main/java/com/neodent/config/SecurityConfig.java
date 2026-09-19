@@ -142,11 +142,27 @@ public class SecurityConfig {
 
                 /* Horarios y bloqueos */
                 .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/horarios/**",
+                    "/api/bloqueos/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+                .requestMatchers(
                     "/api/horarios/**",
                     "/api/bloqueos/**"
                 ).hasAnyRole(
                     AppConstants.Roles.ADMIN,
                     AppConstants.Roles.RECEPCIONISTA
+                )
+
+                /* Usuarios internos */
+                .requestMatchers(
+                    "/api/usuarios-internos/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
                 )
 
                 /* Todo lo no definido explícitamente queda bloqueado.*/

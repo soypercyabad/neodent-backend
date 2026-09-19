@@ -4,6 +4,7 @@ import com.neodent.cita.dto.request.CrearBloqueoHorarioRequest;
 import com.neodent.cita.dto.response.BloqueoHorarioResponse;
 import com.neodent.cita.model.BloqueoHorario;
 import com.neodent.cita.repository.BloqueoHorarioRepository;
+import com.neodent.cita.repository.CitaRepository;
 import com.neodent.odontologo.model.Odontologo;
 import com.neodent.odontologo.repository.OdontologoRepository;
 import com.neodent.sede.model.Sede;
@@ -26,6 +27,7 @@ public class BloqueoHorarioService {
     private final OdontologoRepository odontologoRepository;
     private final SedeRepository sedeRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CitaRepository citaRepository;
 
     @Transactional
     public BloqueoHorarioResponse crear(CrearBloqueoHorarioRequest request, Long usuarioId) {
@@ -54,6 +56,16 @@ public class BloqueoHorarioService {
 
         if (cruce) {
             throw new ConflictException("Existe un bloqueo que se cruza con el intervalo indicado");
+        }
+
+        boolean tieneCitas = citaRepository.existeCitaActivaEnHorario(
+            request.odontologoId(),
+            request.fechaInicio(),
+            request.fechaFin()
+        );
+
+        if (tieneCitas) {
+            throw new ConflictException("No se puede crear el bloqueo porque existen citas programadas en ese intervalo");
         }
 
         BloqueoHorario bloqueo = new BloqueoHorario();
