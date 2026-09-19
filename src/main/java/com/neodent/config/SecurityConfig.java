@@ -47,6 +47,12 @@ public class SecurityConfig {
                     "/swagger-ui.html"
                 ).permitAll()
 
+                /* Perfil de la cuenta autenticada */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/auth/me"
+                ).authenticated()
+
                 /* Autenticación / registro / activación */
                 .requestMatchers(
                     "/api/auth/**"
