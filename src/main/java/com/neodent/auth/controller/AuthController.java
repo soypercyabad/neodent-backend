@@ -27,8 +27,10 @@ import com.neodent.auth.dto.response.StartAccountActivationResponse;
 import com.neodent.auth.dto.response.ValidatePasswordResetResponse;
 import com.neodent.auth.dto.response.VerifyEmailResponse;
 import com.neodent.auth.dto.response.VerifyTwoFactorResponse;
+import com.neodent.auth.dto.response.AuthenticatedUserResponse;
 import com.neodent.auth.security.RefreshCookieService;
 import com.neodent.auth.service.AccountActivationService;
+import com.neodent.auth.service.AuthenticatedUserService;
 import com.neodent.auth.service.AuthService;
 import com.neodent.auth.service.OtpService;
 import com.neodent.auth.service.PasswordResetService;
@@ -42,6 +44,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
@@ -58,6 +62,7 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
+    private final AuthenticatedUserService authenticatedUserService;
 
 
     @Operation(
@@ -420,5 +425,22 @@ public class AuthController {
         refreshCookieService.eliminar(response);
 
         return ResponseEntity.noContent().build();
+    }
+
+
+
+    @Operation(
+        summary = "Obtener perfil autenticado",
+        description = "Devuelve los datos de la cuenta asociada al JWT."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Perfil obtenido"),
+        @ApiResponse(responseCode = "401", description = "Sesión inválida o expirada")
+    })
+    @GetMapping("/me")
+    public AuthenticatedUserResponse obtenerMiPerfil(@AuthenticationPrincipal Jwt jwt) {
+        Long idUsuario = Long.valueOf(jwt.getSubject());
+
+        return authenticatedUserService.obtenerPerfil(idUsuario);
     }
 }
