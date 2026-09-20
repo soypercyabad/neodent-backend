@@ -37,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -254,21 +255,88 @@ public class UsuarioInternoService {
             throw new ConflictException("Rol interno no válido");
         }
 
-        return usuarioRepository.buscarUsuariosInternos(
+        Page<Usuario> usuariosPage = usuarioRepository.buscarUsuariosInternos(
             rolNormalizado,
             estadoNormalizado,
             activo,
             buscarNormalizado,
             pageable
-        ).map(usuario -> {
-            Personal personal = personalRepository.findByUsuarioId(usuario.getId())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "El usuario interno no tiene registro PERSONAL"
-                    )
-                );
+        );
 
-            return construirResponse(usuario, personal);
+        if (usuariosPage.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Usuario> usuarios = usuariosPage.getContent();
+        List<Long> usuarioIds = usuarios.stream().map(Usuario::getId).toList();
+
+        List<Personal> personalList = personalRepository.findAllByUsuarioIdInWithTipoDocumento(usuarioIds);
+        Map<Long, Personal> personalPorUsuarioId = personalList.stream()
+            .collect(Collectors.toMap(p -> p.getUsuario().getId(), Function.identity()));
+
+        List<Long> personalIds = personalList.stream().map(Personal::getId).toList();
+        List<Odontologo> odontologos = personalIds.isEmpty()
+            ? List.of()
+            : odontologoRepository.findAllByPersonalIdIn(personalIds);
+
+        Map<Long, Odontologo> odontologoPorPersonalId = odontologos.stream()
+            .collect(Collectors.toMap(o -> o.getPersonal().getId(), Function.identity()));
+
+        List<Long> odontologoIds = odontologos.stream().map(Odontologo::getId).toList();
+        Map<Long, List<OdontologoEspecialidad>> especialidadesPorOdontologoId = odontologoIds.isEmpty()
+            ? Map.of()
+            : odontologoEspecialidadRepository
+                .findAllByOdontologoIdInAndActivoTrueWithEspecialidad(odontologoIds)
+                .stream()
+                .collect(Collectors.groupingBy(oe -> oe.getOdontologo().getId()));
+
+        return usuariosPage.map(usuario -> {
+            Personal personal = personalPorUsuarioId.get(usuario.getId());
+            if (personal == null) {
+                throw new ResourceNotFoundException(
+                    "El usuario interno no tiene registro PERSONAL"
+                );
+            }
+
+            Odontologo odontologo = odontologoPorPersonalId.get(personal.getId());
+            List<OdontologoEspecialidad> relaciones = odontologo != null
+                ? especialidadesPorOdontologoId.getOrDefault(odontologo.getId(), List.of())
+                : List.of();
+
+            List<Integer> especialidadIds = relaciones.stream()
+                .map(r -> r.getEspecialidad().getId())
+                .sorted()
+                .toList();
+
+            List<String> especialidades = relaciones.stream()
+                .map(r -> r.getEspecialidad().getNombre())
+                .sorted()
+                .toList();
+
+            return new UsuarioInternoResponse(
+                usuario.getId(),
+                usuario.getAliasInterno(),
+                usuario.getCorreo(),
+                usuario.getEstado().getNombre(),
+                usuario.getRoles().stream()
+                    .map(Rol::getNombre)
+                    .sorted()
+                    .toList(),
+
+                personal.getId(),
+                personal.getTipoDocumento().getId(),
+                personal.getNumeroDocumento(),
+                personal.getNombres(),
+                personal.getApellidoPaterno(),
+                personal.getApellidoMaterno(),
+                personal.getTelefono(),
+                personal.getActivo(),
+
+                odontologo != null ? odontologo.getId() : null,
+                odontologo != null ? odontologo.getNumeroColegiatura() : null,
+                especialidadIds,
+                especialidades
+            );
         });
     }
 
@@ -505,10 +573,7 @@ public class UsuarioInternoService {
         return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
-    private UsuarioInternoResponse construirResponse(
-        Usuario usuario,
-        Personal personal
-    ) {
+    private UsuarioInternoResponse construirResponse(Usuario usuario, Personal personal) {
         if (personal == null) {
             throw new ResourceNotFoundException(
                 "El usuario interno no tiene registro PERSONAL"
@@ -518,15 +583,20 @@ public class UsuarioInternoService {
         Optional<Odontologo> odontologo =
             odontologoRepository.findByPersonalId(personal.getId());
 
-        List<Integer> especialidades = odontologo
+        List<OdontologoEspecialidad> relaciones = odontologo
             .map(o -> odontologoEspecialidadRepository
-                .findAllByOdontologoId(o.getId())
-                .stream()
-                .filter(r -> Boolean.TRUE.equals(r.getActivo()))
-                .map(r -> r.getEspecialidad().getId())
-                .sorted()
-                .toList())
+                .findAllByOdontologoIdAndActivoTrueWithEspecialidad(o.getId()))
             .orElseGet(List::of);
+
+        List<Integer> especialidadIds = relaciones.stream()
+            .map(r -> r.getEspecialidad().getId())
+            .sorted()
+            .toList();
+
+        List<String> especialidades = relaciones.stream()
+            .map(r -> r.getEspecialidad().getNombre())
+            .sorted()
+            .toList();
 
         return new UsuarioInternoResponse(
             usuario.getId(),
@@ -549,6 +619,7 @@ public class UsuarioInternoService {
 
             odontologo.map(Odontologo::getId).orElse(null),
             odontologo.map(Odontologo::getNumeroColegiatura).orElse(null),
+            especialidadIds,
             especialidades
         );
     }
