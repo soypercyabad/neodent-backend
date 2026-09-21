@@ -35,6 +35,7 @@ public final class AppConstants {
         public static final String LOGIN_2FA = "LOGIN_2FA";
         public static final String EMAIL_VERIFICATION = "EMAIL_VERIFICATION";
         public static final String ACCOUNT_ACTIVATION = "ACCOUNT_ACTIVATION";
+        public static final String STAFF_ACTIVATION = "STAFF_ACTIVATION";
 
         private TiposOtp() {}
     }
@@ -42,6 +43,7 @@ public final class AppConstants {
     public static final class TiposTokenAccion {
         public static final String ACCOUNT_INVITATION = "ACCOUNT_INVITATION";
         public static final String PASSWORD_RESET = "PASSWORD_RESET";
+        public static final String STAFF_INVITATION = "STAFF_INVITATION";
 
         private TiposTokenAccion() {}
     }
