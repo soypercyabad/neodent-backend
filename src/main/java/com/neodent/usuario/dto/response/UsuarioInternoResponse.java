@@ -20,5 +20,6 @@ public record UsuarioInternoResponse(
 
     Long odontologoId,
     String numeroColegiatura,
-    List<Integer> especialidadIds
+    List<Integer> especialidadIds,
+    List<String> especialidades
 ) {}

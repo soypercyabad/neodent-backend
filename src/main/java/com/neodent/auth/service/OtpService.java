@@ -24,6 +24,7 @@ public class OtpService {
     private static final String TIPO_LOGIN = AppConstants.TiposOtp.LOGIN_2FA;
     private static final String TIPO_EMAIL = AppConstants.TiposOtp.EMAIL_VERIFICATION;
     private static final String TIPO_ACTIVACION = AppConstants.TiposOtp.ACCOUNT_ACTIVATION;
+    private static final String TIPO_STAFF_ACTIVATION = AppConstants.TiposOtp.STAFF_ACTIVATION;
     private static final int EXPIRACION_MINUTOS = 5;
     private static final int MAX_REENVIOS = 3;
     private static final int COOLDOWN_REENVIO_SEGUNDOS = 60;
@@ -178,6 +179,7 @@ public class OtpService {
             case TIPO_LOGIN -> generarLoginOtp(anterior.getUsuario());
             case TIPO_EMAIL -> generarEmailVerification(anterior.getUsuario());
             case TIPO_ACTIVACION -> generarAccountActivationOtp(anterior.getPaciente());
+            case TIPO_STAFF_ACTIVATION -> generarStaffActivationOtp(anterior.getUsuario());
             default -> throw new UnauthorizedException("Tipo de verificación no permitido");
         };
 
@@ -256,5 +258,51 @@ public class OtpService {
         repository.saveAndFlush(otp);
 
         return otp.getPaciente();
+    }
+
+    @Transactional
+    public OtpGenerado generarStaffActivationOtp(Usuario usuario) {
+        String codigo = String.format("%06d", random.nextInt(1_000_000));
+
+        CodigoVerificacion otp = new CodigoVerificacion();
+        otp.setUsuario(usuario);
+        otp.setCorreoDestino(usuario.getCorreo());
+        otp.setTipo(AppConstants.TiposOtp.STAFF_ACTIVATION);
+        otp.setHashCodigo(passwordEncoder.encode(codigo));
+        otp.setFechaExpiracion(LocalDateTime.now(clock).plusMinutes(EXPIRACION_MINUTOS));
+        otp.setIntentos((short) 0);
+        otp.setMaxIntentos((short) 5);
+        otp.setUsado(false);
+
+        CodigoVerificacion guardado = repository.save(otp);
+        emailService.enviarOtpActivacionCuenta(usuario.getCorreo(), codigo);
+
+        return new OtpGenerado(guardado.getId(), codigo);
+    }
+
+    @Transactional(noRollbackFor = UnauthorizedException.class)
+    public Usuario verificarStaffActivationOtp(Long challengeId, String codigo) {
+        CodigoVerificacion otp = repository
+            .findByIdAndTipo(challengeId, AppConstants.TiposOtp.STAFF_ACTIVATION)
+            .orElseThrow(() -> new UnauthorizedException("Código de activación inválido"));
+
+        if (Boolean.TRUE.equals(otp.getUsado()) || otp.getIntentos() >= otp.getMaxIntentos())
+            throw new UnauthorizedException("Código utilizado o intentos agotados");
+
+        if (!LocalDateTime.now(clock).isBefore(otp.getFechaExpiracion()))
+            throw new UnauthorizedException("El código ha expirado");
+
+        if (!passwordEncoder.matches(codigo, otp.getHashCodigo())) {
+            short intentos = (short) (otp.getIntentos() + 1);
+            otp.setIntentos(intentos);
+            if (intentos >= otp.getMaxIntentos()) otp.setUsado(true);
+            repository.saveAndFlush(otp);
+            throw new UnauthorizedException("Código de verificación incorrecto");
+        }
+
+        otp.setUsado(true);
+        repository.saveAndFlush(otp);
+
+        return otp.getUsuario();
     }
 }

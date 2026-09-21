@@ -160,7 +160,7 @@ public class BrevoEmailService implements EmailService {
         context.setVariable("nombre", data.nombre());
         context.setVariable("correo", data.correo());
         context.setVariable("roles", String.join(", ", data.roles()));
-        context.setVariable("loginUrl", data.loginUrl());
+        context.setVariable("activationUrl", data.activationUrl());
 
         String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.BIENVENIDA_PERSONAL, context);
         enviar(destinatario, "Bienvenido(a) a NeoDent", html);

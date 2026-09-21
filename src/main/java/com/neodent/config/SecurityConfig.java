@@ -158,6 +158,15 @@ public class SecurityConfig {
                     AppConstants.Roles.RECEPCIONISTA
                 )
 
+                .requestMatchers(
+                    HttpMethod.GET, 
+                    "/api/especialidades/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+
                 /* Usuarios internos */
                 .requestMatchers(
                     "/api/usuarios-internos/**"

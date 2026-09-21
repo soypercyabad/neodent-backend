@@ -6,5 +6,5 @@ public record BienvenidaPersonalEmailData(
     String nombre,
     String correo,
     List<String> roles,
-    String loginUrl
+    String activationUrl
 ) {}

@@ -6,7 +6,6 @@ import java.util.Set;
 
 public record CrearUsuarioInternoRequest(
     @NotBlank @Email String correo,
-    @NotBlank @Size(min = 8, max = 72) String contrasena,
     @NotEmpty Set<String> roles,
 
     @NotNull Integer tipoDocumentoId,

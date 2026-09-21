@@ -1,6 +1,7 @@
 package com.neodent.usuario.service;
 
 import com.neodent.auth.service.RefreshTokenService;
+import com.neodent.auth.service.StaffInvitationService;
 import com.neodent.dni.DniService;
 import com.neodent.especialidad.model.Especialidad;
 import com.neodent.especialidad.model.OdontologoEspecialidad;
@@ -17,6 +18,7 @@ import com.neodent.personal.repository.PersonalRepository;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
+import com.neodent.shared.util.NameFormatter;
 import com.neodent.usuario.dto.request.ActualizarUsuarioInternoRequest;
 import com.neodent.usuario.dto.request.CrearUsuarioInternoRequest;
 import com.neodent.usuario.dto.response.UsuarioInternoResponse;
@@ -37,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,6 +64,7 @@ public class UsuarioInternoService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final DniService dniService;
+    private final StaffInvitationService staffInvitationService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -81,23 +85,22 @@ public class UsuarioInternoService {
             throw new ConflictException("El documento ya se encuentra registrado");
         }
 
-        EstadoUsuario activo = estadoUsuarioRepository
-            .findByNombreAndActivoTrue(AppConstants.EstadosUsuario.ACTIVO)
-            .orElseThrow(() -> new ResourceNotFoundException("Estado ACTIVO no configurado"));
-
         TipoDocumento tipoDocumento = tipoDocumentoRepository
             .findByIdAndActivoTrue(request.tipoDocumentoId())
             .orElseThrow(() -> new ResourceNotFoundException("Tipo de documento no encontrado"));
 
+        EstadoUsuario pendiente = estadoUsuarioRepository
+        .findByNombreAndActivoTrue(AppConstants.EstadosUsuario.PENDIENTE)
+        .orElseThrow(() -> new ResourceNotFoundException("Estado PENDIENTE no configurado"));
+
         Usuario usuario = new Usuario();
         usuario.setAliasInterno(generarAlias(correo));
         usuario.setCorreo(correo);
-        usuario.setHashContrasena(passwordEncoder.encode(request.contrasena()));
-        usuario.setEstado(activo);
+        usuario.setHashContrasena(passwordEncoder.encode(UUID.randomUUID().toString()));
+        usuario.setEstado(pendiente);
         usuario.setSegundoFactor(true);
-        usuario.setCorreoVerificado(true);
+        usuario.setCorreoVerificado(false);
         usuario.getRoles().addAll(obtenerRoles(nombresRoles));
-
         usuario = usuarioRepository.save(usuario);
 
         Personal personal = new Personal();
@@ -119,12 +122,11 @@ public class UsuarioInternoService {
             request.especialidadIds()
         );
 
-        BienvenidaPersonalEmailData emailData =
-        new BienvenidaPersonalEmailData(
+        BienvenidaPersonalEmailData emailData = new BienvenidaPersonalEmailData(
             construirNombrePersonal(personal),
             usuario.getCorreo(),
             nombresRoles.stream().sorted().toList(),
-            frontendUrl + "/login"
+            staffInvitationService.generar(usuario)
         );
 
         emailService.enviarBienvenidaPersonal(
@@ -152,11 +154,7 @@ public class UsuarioInternoService {
     }
 
     @Transactional
-    public UsuarioInternoResponse actualizar(
-        Long usuarioId,
-        ActualizarUsuarioInternoRequest request,
-        Long usuarioAutenticadoId
-    ) {
+    public UsuarioInternoResponse actualizar(Long usuarioId, ActualizarUsuarioInternoRequest request, Long usuarioAutenticadoId) {
         Usuario usuario = obtenerUsuario(usuarioId);
 
         Personal personal = personalRepository.findByUsuarioId(usuarioId)
@@ -196,7 +194,6 @@ public class UsuarioInternoService {
             .orElseThrow(() -> new ResourceNotFoundException("Tipo de documento no encontrado"));
 
         usuario.setCorreo(correo);
-        usuario.setCorreoVerificado(true);
 
         boolean contrasenaCambio = request.nuevaContrasena() != null && !request.nuevaContrasena().isBlank();
         boolean rolesCambiaron = !rolesActuales.equals(nombresRoles);
@@ -219,9 +216,9 @@ public class UsuarioInternoService {
 
         personal.setTipoDocumento(tipoDocumento);
         personal.setNumeroDocumento(request.numeroDocumento().trim());
-        personal.setNombres(request.nombres().trim());
-        personal.setApellidoPaterno(request.apellidoPaterno().trim());
-        personal.setApellidoMaterno(limpiar(request.apellidoMaterno()));
+        personal.setNombres(NameFormatter.format(request.nombres()));
+        personal.setApellidoPaterno(NameFormatter.format(request.apellidoPaterno()));
+        personal.setApellidoMaterno(NameFormatter.format(request.apellidoMaterno()));
         personal.setTelefono(limpiar(request.telefono()));
 
         usuarioRepository.save(usuario);
@@ -254,21 +251,88 @@ public class UsuarioInternoService {
             throw new ConflictException("Rol interno no válido");
         }
 
-        return usuarioRepository.buscarUsuariosInternos(
+        Page<Usuario> usuariosPage = usuarioRepository.buscarUsuariosInternos(
             rolNormalizado,
             estadoNormalizado,
             activo,
             buscarNormalizado,
             pageable
-        ).map(usuario -> {
-            Personal personal = personalRepository.findByUsuarioId(usuario.getId())
-                .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                        "El usuario interno no tiene registro PERSONAL"
-                    )
-                );
+        );
 
-            return construirResponse(usuario, personal);
+        if (usuariosPage.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        List<Usuario> usuarios = usuariosPage.getContent();
+        List<Long> usuarioIds = usuarios.stream().map(Usuario::getId).toList();
+
+        List<Personal> personalList = personalRepository.findAllByUsuarioIdInWithTipoDocumento(usuarioIds);
+        Map<Long, Personal> personalPorUsuarioId = personalList.stream()
+            .collect(Collectors.toMap(p -> p.getUsuario().getId(), Function.identity()));
+
+        List<Long> personalIds = personalList.stream().map(Personal::getId).toList();
+        List<Odontologo> odontologos = personalIds.isEmpty()
+            ? List.of()
+            : odontologoRepository.findAllByPersonalIdIn(personalIds);
+
+        Map<Long, Odontologo> odontologoPorPersonalId = odontologos.stream()
+            .collect(Collectors.toMap(o -> o.getPersonal().getId(), Function.identity()));
+
+        List<Long> odontologoIds = odontologos.stream().map(Odontologo::getId).toList();
+        Map<Long, List<OdontologoEspecialidad>> especialidadesPorOdontologoId = odontologoIds.isEmpty()
+            ? Map.of()
+            : odontologoEspecialidadRepository
+                .findAllByOdontologoIdInAndActivoTrueWithEspecialidad(odontologoIds)
+                .stream()
+                .collect(Collectors.groupingBy(oe -> oe.getOdontologo().getId()));
+
+        return usuariosPage.map(usuario -> {
+            Personal personal = personalPorUsuarioId.get(usuario.getId());
+            if (personal == null) {
+                throw new ResourceNotFoundException(
+                    "El usuario interno no tiene registro PERSONAL"
+                );
+            }
+
+            Odontologo odontologo = odontologoPorPersonalId.get(personal.getId());
+            List<OdontologoEspecialidad> relaciones = odontologo != null
+                ? especialidadesPorOdontologoId.getOrDefault(odontologo.getId(), List.of())
+                : List.of();
+
+            List<Integer> especialidadIds = relaciones.stream()
+                .map(r -> r.getEspecialidad().getId())
+                .sorted()
+                .toList();
+
+            List<String> especialidades = relaciones.stream()
+                .map(r -> r.getEspecialidad().getNombre())
+                .sorted()
+                .toList();
+
+            return new UsuarioInternoResponse(
+                usuario.getId(),
+                usuario.getAliasInterno(),
+                usuario.getCorreo(),
+                usuario.getEstado().getNombre(),
+                usuario.getRoles().stream()
+                    .map(Rol::getNombre)
+                    .sorted()
+                    .toList(),
+
+                personal.getId(),
+                personal.getTipoDocumento().getId(),
+                personal.getNumeroDocumento(),
+                personal.getNombres(),
+                personal.getApellidoPaterno(),
+                personal.getApellidoMaterno(),
+                personal.getTelefono(),
+                personal.getActivo(),
+
+                odontologo != null ? odontologo.getId() : null,
+                odontologo != null ? odontologo.getNumeroColegiatura() : null,
+                especialidadIds,
+                especialidades
+            );
         });
     }
 
@@ -329,6 +393,10 @@ public class UsuarioInternoService {
     @Transactional
     public UsuarioInternoResponse activar(Long usuarioId) {
         Usuario usuario = obtenerUsuario(usuarioId);
+
+        if (AppConstants.EstadosUsuario.PENDIENTE.equals(usuario.getEstado().getNombre()) || !Boolean.TRUE.equals(usuario.getCorreoVerificado())) {
+            throw new ConflictException("El trabajador debe completar la invitación y crear su contraseña antes de activar su cuenta");
+        }
 
         Personal personal = personalRepository.findByUsuarioId(usuarioId)
             .orElseThrow(() -> new ResourceNotFoundException("Personal no encontrado"));
@@ -505,10 +573,7 @@ public class UsuarioInternoService {
         return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
-    private UsuarioInternoResponse construirResponse(
-        Usuario usuario,
-        Personal personal
-    ) {
+    private UsuarioInternoResponse construirResponse(Usuario usuario, Personal personal) {
         if (personal == null) {
             throw new ResourceNotFoundException(
                 "El usuario interno no tiene registro PERSONAL"
@@ -518,15 +583,20 @@ public class UsuarioInternoService {
         Optional<Odontologo> odontologo =
             odontologoRepository.findByPersonalId(personal.getId());
 
-        List<Integer> especialidades = odontologo
+        List<OdontologoEspecialidad> relaciones = odontologo
             .map(o -> odontologoEspecialidadRepository
-                .findAllByOdontologoId(o.getId())
-                .stream()
-                .filter(r -> Boolean.TRUE.equals(r.getActivo()))
-                .map(r -> r.getEspecialidad().getId())
-                .sorted()
-                .toList())
+                .findAllByOdontologoIdAndActivoTrueWithEspecialidad(o.getId()))
             .orElseGet(List::of);
+
+        List<Integer> especialidadIds = relaciones.stream()
+            .map(r -> r.getEspecialidad().getId())
+            .sorted()
+            .toList();
+
+        List<String> especialidades = relaciones.stream()
+            .map(r -> r.getEspecialidad().getNombre())
+            .sorted()
+            .toList();
 
         return new UsuarioInternoResponse(
             usuario.getId(),
@@ -549,6 +619,7 @@ public class UsuarioInternoService {
 
             odontologo.map(Odontologo::getId).orElse(null),
             odontologo.map(Odontologo::getNumeroColegiatura).orElse(null),
+            especialidadIds,
             especialidades
         );
     }
