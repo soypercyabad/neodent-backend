@@ -1,0 +1,15 @@
+.git
+.github
+.vscode
+.idea
+
+target
+*.log
+
+.env
+.env.*
+*.key
+*.pem
+
+README.md
+HELP.md
