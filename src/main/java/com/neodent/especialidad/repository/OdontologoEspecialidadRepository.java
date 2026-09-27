@@ -22,4 +22,6 @@ public interface OdontologoEspecialidadRepository extends JpaRepository<Odontolo
     List<OdontologoEspecialidad> findAllByOdontologoIdAndActivoTrueWithEspecialidad(@Param("odontologoId") Long odontologoId);
 
     Optional<OdontologoEspecialidad> findByOdontologoIdAndEspecialidadId(Long odontologoId, Integer especialidadId);
+
+    boolean existsByEspecialidadIdAndActivoTrue(Integer especialidadId);
 }

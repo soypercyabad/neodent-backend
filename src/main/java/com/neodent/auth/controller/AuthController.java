@@ -65,6 +65,7 @@ public class AuthController {
     private final AuthenticatedUserService authenticatedUserService;
 
 
+
     @Operation(
         summary = "Iniciar sesión",
         description = """
@@ -139,6 +140,8 @@ public class AuthController {
         String ip = obtenerIpCliente(httpRequest);
         return patientRegistrationService.verificarDni(request.dni(), request.turnstileToken(), ip);
     }
+
+
 
     private String obtenerIpCliente(HttpServletRequest request) {
         String cfIp = request.getHeader("CF-Connecting-IP");

@@ -24,6 +24,8 @@ public class HorarioOdontologoController {
 
     private final HorarioOdontologoService horarioService;
 
+
+
     @Operation(
         summary = "Listar horarios de odontólogo",
         description = "Retorna todos los horarios de atención de un odontólogo"

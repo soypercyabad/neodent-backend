@@ -19,6 +19,7 @@ public class DniController {
     private final DniService dniService;
 
 
+
     @Operation(
         summary = "Consultar DNI",
         description = """

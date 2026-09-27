@@ -6,6 +6,7 @@ import com.neodent.cita.dto.request.CancelarCitaRequest;
 import com.neodent.cita.dto.request.MarcarNoAsistioRequest;
 import com.neodent.cita.dto.request.ReprogramarCitaRequest;
 import com.neodent.cita.dto.response.CitaResponse;
+import com.neodent.cita.dto.response.DetalleCitaResponse;
 import com.neodent.cita.model.Cita;
 import com.neodent.cita.model.EstadoCita;
 import com.neodent.cita.model.HistorialCita;
@@ -20,7 +21,9 @@ import com.neodent.notification.EmailService;
 import com.neodent.notification.dto.CitaConfirmadaEmailData;
 import com.neodent.notification.dto.CitaCanceladaEmailData;
 import com.neodent.notification.dto.CitaReprogramadaEmailData;
+import com.neodent.odontologo.repository.OdontologoRepository;
 import com.neodent.paciente.model.Paciente;
+import com.neodent.servicio.repository.ServicioSedeRepository;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ForbiddenException;
@@ -55,7 +58,9 @@ public class CitaService {
     private final AccountInvitationService accountInvitationService;
     private final HistorialCitaRepository historialCitaRepository;
     private final HorarioOdontologoRepository horarioRepository;
+    private final OdontologoRepository odontologoRepository;
     private final EmailService emailService;
+    private final ServicioSedeRepository servicioSedeRepository;
     private final Clock clock;
 
     @Value("${app.frontend-url}")
@@ -84,6 +89,28 @@ public class CitaService {
             .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
 
         Long odontologoId = reserva.getOdontologoEspecialidad().getOdontologo().getId();
+
+        odontologoRepository.bloquearParaReserva(odontologoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Odontólogo no encontrado"));
+
+        ahora = LocalDateTime.now(clock);
+        if (!reserva.getFechaExpiracion().isAfter(ahora)) {
+            throw new ConflictException("La reserva temporal ha expirado");
+        }
+
+        if (reserva.getServicioSolicitado() != null) {
+            Integer servicioId = reserva.getServicioSolicitado().getId();
+            Integer sedeId = reserva.getSede().getId();
+
+            if (!Boolean.TRUE.equals(reserva.getServicioSolicitado().getActivo())
+                || !Boolean.TRUE.equals(reserva.getSede().getActivo())
+                || !servicioSedeRepository.existsByIdServicioAndIdSedeAndActivoTrue(servicioId, sedeId)) {
+
+                throw new ConflictException(
+                    "El servicio ya no está disponible en la sede seleccionada. Selecciona otro horario"
+                );
+            }
+        }
 
         boolean bloqueado = bloqueoRepository.contarBloqueos(
             odontologoId,
@@ -226,6 +253,20 @@ public class CitaService {
             throw new ConflictException("La cita no puede ser reprogramada en su estado actual");
         }
 
+        if (cita.getServicioSolicitado() != null) {
+            Integer servicioId = cita.getServicioSolicitado().getId();
+            Integer sedeId = cita.getSede().getId();
+
+            if (!Boolean.TRUE.equals(cita.getServicioSolicitado().getActivo())
+                || !Boolean.TRUE.equals(cita.getSede().getActivo())
+                || !servicioSedeRepository.existsByIdServicioAndIdSedeAndActivoTrue(servicioId, sedeId)) {
+
+                throw new ConflictException(
+                    "El servicio ya no está disponible en esta sede para reprogramar la cita"
+                );
+            }
+        }
+
         LocalDateTime nuevoInicio = request.fechaHoraInicio();
 
         if (nuevoInicio.equals(cita.getFechaHoraInicio())) {
@@ -262,6 +303,14 @@ public class CitaService {
         }
 
         Long odontologoId = cita.getOdontologoEspecialidad().getOdontologo().getId();
+
+        odontologoRepository.bloquearParaReserva(odontologoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Odontólogo no encontrado"));
+
+        ahora = LocalDateTime.now(clock);
+        if (!nuevoInicio.isAfter(ahora)) {
+            throw new ConflictException("La nueva fecha y hora debe ser futura");
+        }
 
         boolean bloqueado = bloqueoRepository.contarBloqueos(
             odontologoId,
@@ -770,5 +819,67 @@ public class CitaService {
         );
 
         emailService.enviarCitaCancelada(paciente.getCorreo(), data);
-}
+    }
+
+    @Transactional(readOnly = true)
+    public DetalleCitaResponse obtenerDetalle(Long citaId, Long usuarioId, List<String> roles) {
+        Cita cita = citaRepository.findById(citaId)
+            .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
+
+        boolean administrativo = roles != null && (
+            roles.contains(AppConstants.Roles.ADMIN) ||
+            roles.contains(AppConstants.Roles.RECEPCIONISTA)
+        );
+
+        boolean pacientePropio = roles != null && roles.contains(AppConstants.Roles.PACIENTE)
+            && cita.getPaciente().getUsuario() != null
+            && cita.getPaciente().getUsuario().getId().equals(usuarioId);
+
+        boolean odontologoPropio = roles != null && roles.contains(AppConstants.Roles.ODONTOLOGO)
+            && cita.getOdontologoEspecialidad().getOdontologo().getPersonal().getUsuario().getId().equals(usuarioId);
+
+        if (!administrativo && !pacientePropio && !odontologoPropio) {
+            throw new ResourceNotFoundException("Cita no encontrada");
+        }
+
+        return mapearDetalle(cita);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DetalleCitaResponse> obtenerAgendaDetallada(LocalDate fecha) {
+        LocalDateTime inicio = fecha != null ? fecha.atStartOfDay() : null;
+        LocalDateTime fin = fecha != null ? fecha.plusDays(1).atStartOfDay() : null;
+
+        return citaRepository.buscarAgenda(null, null, null, inicio, fin)
+            .stream().map(this::mapearDetalle).toList();
+    }
+
+    private DetalleCitaResponse mapearDetalle(Cita cita) {
+        var paciente = cita.getPaciente();
+        var personal = cita.getOdontologoEspecialidad().getOdontologo().getPersonal();
+        var servicio = cita.getServicioSolicitado();
+        var sede = cita.getSede();
+
+        return new DetalleCitaResponse(
+            cita.getId(),
+            paciente.getId(),
+            nombreCompleto(paciente.getNombres(), paciente.getApellidoPaterno(), paciente.getApellidoMaterno()),
+            cita.getOdontologoEspecialidad().getId(),
+            nombreCompleto(personal.getNombres(), personal.getApellidoPaterno(), personal.getApellidoMaterno()),
+            cita.getOdontologoEspecialidad().getEspecialidad().getNombre(),
+            sede.getId(),
+            sede.getNombre(),
+            sede.getDireccion(),
+            servicio != null ? servicio.getId() : null,
+            servicio != null ? servicio.getNombre() : "Servicio no especificado",
+            cita.getEstado().getNombre(),
+            cita.getFechaHoraInicio(),
+            cita.getFechaHoraFin()
+        );
+    }
+
+    private String nombreCompleto(String nombres, String apellidoPaterno, String apellidoMaterno) {
+        return (nombres + " " + apellidoPaterno + " " +
+            (apellidoMaterno != null ? apellidoMaterno : "")).trim();
+    }
 }

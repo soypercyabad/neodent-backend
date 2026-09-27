@@ -31,6 +31,8 @@ public class PacienteController {
     private final PacienteService pacienteService;
     private final AccountInvitationService accountInvitationService;
 
+
+
     @Operation(
         summary = "Buscar paciente por ID", 
         description = "Obtiene la información de un paciente registrado usando su identificador interno."

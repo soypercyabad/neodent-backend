@@ -37,6 +37,12 @@ public class Odontologo {
     private String numeroColegiatura;
 
     @Column(
+        name = "foto_nombre_archivo",
+        length = 255
+    )
+    private String fotoNombreArchivo;
+
+    @Column(
         name = "activo",
         nullable = false
     )

@@ -23,6 +23,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     boolean existsByCorreoIgnoreCaseAndIdNot(String correo, Long id);
 
     boolean existsByAliasInternoIgnoreCase(String aliasInterno);
+    
+    @Query("SELECT COUNT(DISTINCT u) FROM Usuario u JOIN u.roles r WHERE r.id = :rolId")
+    long contarUsuariosConRol(@Param("rolId") Integer rolId);
 
     @Query("""
         SELECT COUNT(DISTINCT u)

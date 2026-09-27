@@ -20,6 +20,7 @@ public record UsuarioInternoResponse(
 
     Long odontologoId,
     String numeroColegiatura,
+    String fotoNombreArchivo,
     List<Integer> especialidadIds,
     List<String> especialidades
 ) {}

@@ -94,7 +94,7 @@ public class UsuarioInternoService {
         .orElseThrow(() -> new ResourceNotFoundException("Estado PENDIENTE no configurado"));
 
         Usuario usuario = new Usuario();
-        usuario.setAliasInterno(generarAlias(correo));
+        usuario.setAliasInterno(generarAlias(request.nombres(), request.apellidoPaterno()));
         usuario.setCorreo(correo);
         usuario.setHashContrasena(passwordEncoder.encode(UUID.randomUUID().toString()));
         usuario.setEstado(pendiente);
@@ -247,10 +247,16 @@ public class UsuarioInternoService {
         String buscarNormalizado =
             buscar == null || buscar.isBlank() ? null : buscar.trim();
 
-        if (rolNormalizado != null && !ROLES_INTERNOS.contains(rolNormalizado)) {
-            throw new ConflictException("Rol interno no válido");
-        }
+        if (rolNormalizado != null) {
+            if (AppConstants.Roles.PACIENTE.equals(rolNormalizado)) {
+                throw new ConflictException("El rol PACIENTE no corresponde a personal interno");
+            }
 
+            rolRepository.findByNombreAndActivoTrue(rolNormalizado)
+                .orElseThrow(() -> 
+                    new ResourceNotFoundException("Rol no configurado o inactivo: " + rolNormalizado)
+                );
+        }
         Page<Usuario> usuariosPage = usuarioRepository.buscarUsuariosInternos(
             rolNormalizado,
             estadoNormalizado,
@@ -330,6 +336,7 @@ public class UsuarioInternoService {
 
                 odontologo != null ? odontologo.getId() : null,
                 odontologo != null ? odontologo.getNumeroColegiatura() : null,
+                odontologo != null ? odontologo.getFotoNombreArchivo() : null,
                 especialidadIds,
                 especialidades
             );
@@ -518,13 +525,23 @@ public class UsuarioInternoService {
         for (String rol : roles) {
             String nombre = rol.trim().toUpperCase();
 
-            if (!ROLES_INTERNOS.contains(nombre)) {
-                throw new ConflictException(
-                    "Rol interno no permitido: " + nombre
-                );
+            if (AppConstants.Roles.PACIENTE.equals(nombre)) {
+                throw new ConflictException("El rol PACIENTE no puede asignarse a personal interno");
             }
 
+            rolRepository.findByNombreAndActivoTrue(nombre)
+                .orElseThrow(() -> new ResourceNotFoundException("Rol no configurado o inactivo: " + nombre));
+
             normalizados.add(nombre);
+        }
+
+        boolean tieneRolOperativo =
+            normalizados.stream().anyMatch(ROLES_INTERNOS::contains);
+
+        if (!tieneRolOperativo) {
+            throw new ConflictException(
+                "El personal debe tener al menos un rol operativo: ADMIN, RECEPCIONISTA u ODONTOLOGO"
+            );
         }
 
         return normalizados;
@@ -546,27 +563,41 @@ public class UsuarioInternoService {
         return resultado;
     }
 
-    private String generarAlias(String correo) {
-        String base = correo.substring(0, correo.indexOf("@"))
-            .toLowerCase()
-            .replaceAll("[^a-z0-9._-]", "");
+    private String generarAlias(String nombres, String apellidoPaterno) {
+        String primerNombre = obtenerPrimeraPalabra(nombres);
 
-        if (base.isBlank()) {
-            base = "usuario";
-        }
+        String inicial = primerNombre.isBlank() ? "u" : primerNombre.substring(0, 1);
+        String apellido = apellidoPaterno == null ? "" : apellidoPaterno.trim();
+        String base = normalizarAlias(inicial + apellido);
 
-        if (base.length() > 45) {
-            base = base.substring(0, 45);
-        }
+        if (base.isBlank()) { base = "usuario"; }
+        if (base.length() > 45) { base = base.substring(0, 45); }
 
         String alias = base;
         int contador = 2;
 
         while (usuarioRepository.existsByAliasInternoIgnoreCase(alias)) {
-            alias = base + contador++;
+            String sufijo = String.valueOf(contador++);
+            int longitudMaximaBase = 50 - sufijo.length();
+            String baseReducida = base.length() > longitudMaximaBase
+                ? base.substring(0, longitudMaximaBase)
+                : base;
+            alias = baseReducida + sufijo;
         }
-
         return alias;
+    }
+
+    private String obtenerPrimeraPalabra(String valor) {
+        if (valor == null || valor.isBlank()) return "";
+        return valor.trim().split("\\s+")[0];
+    }
+
+    private String normalizarAlias(String valor) {
+        return java.text.Normalizer
+            .normalize(valor, java.text.Normalizer.Form.NFD)
+            .replaceAll("\\p{M}", "")
+            .toLowerCase(Locale.ROOT)
+            .replaceAll("[^a-z0-9]", "");
     }
 
     private String limpiar(String valor) {
@@ -619,6 +650,7 @@ public class UsuarioInternoService {
 
             odontologo.map(Odontologo::getId).orElse(null),
             odontologo.map(Odontologo::getNumeroColegiatura).orElse(null),
+            odontologo.map(Odontologo::getFotoNombreArchivo).orElse(null),
             especialidadIds,
             especialidades
         );

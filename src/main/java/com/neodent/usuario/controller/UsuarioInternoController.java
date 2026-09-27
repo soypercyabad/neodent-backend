@@ -1,5 +1,6 @@
 package com.neodent.usuario.controller;
 
+import com.neodent.odontologo.service.OdontologoFotoService;
 import com.neodent.shared.response.PaginaResponse;
 import com.neodent.usuario.dto.request.ActualizarUsuarioInternoRequest;
 import com.neodent.usuario.dto.request.CrearUsuarioInternoRequest;
@@ -7,16 +8,12 @@ import com.neodent.usuario.dto.request.VerificarDocumentoPersonalRequest;
 import com.neodent.usuario.dto.response.UsuarioInternoResponse;
 import com.neodent.usuario.dto.response.VerificarDocumentoPersonalResponse;
 import com.neodent.usuario.service.UsuarioInternoService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
-import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -24,6 +21,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/usuarios-internos")
@@ -35,6 +35,9 @@ import org.springframework.web.bind.annotation.*;
 public class UsuarioInternoController {
 
     private final UsuarioInternoService usuarioInternoService;
+    private final OdontologoFotoService odontologoFotoService;
+
+
 
     @Operation(
         summary = "Crear usuario interno",
@@ -124,7 +127,7 @@ public class UsuarioInternoController {
     }
 
 
-    
+
     @Operation(
         summary = "Actualizar usuario interno",
         description = "Actualiza los datos, roles y perfil profesional de un usuario interno."
@@ -160,7 +163,7 @@ public class UsuarioInternoController {
     }
 
 
-    
+
     @Operation(
         summary = "Desactivar usuario interno",
         description = "Desactiva la cuenta del usuario, el personal asociado y revoca sus sesiones activas."
@@ -170,16 +173,13 @@ public class UsuarioInternoController {
         @ApiResponse(responseCode = "404", description = "Usuario interno no encontrado")
     })
     @PatchMapping("/{id}/desactivar")
-    public UsuarioInternoResponse desactivar(
-        @PathVariable Long id,
-        @AuthenticationPrincipal Jwt jwt
-    ) {
+    public UsuarioInternoResponse desactivar(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         Long usuarioAutenticadoId = Long.valueOf(jwt.getSubject());
         return usuarioInternoService.desactivar(id, usuarioAutenticadoId);
     }
 
 
-    
+
     @Operation(
         summary = "Verificar documento personal",
         description = "Verifica si un documento se encuentra disponible y si se puede obtener datos desde el DNI."
@@ -189,12 +189,40 @@ public class UsuarioInternoController {
         @ApiResponse(responseCode = "409", description = "Documento ya registrado como personal")
     })
     @PostMapping("/check-documento")
-    public VerificarDocumentoPersonalResponse verificarDocumento(
-        @Valid @RequestBody VerificarDocumentoPersonalRequest request
-    ) {
-        return usuarioInternoService.verificarDocumento(
-            request.tipoDocumentoId(),
-            request.numeroDocumento()
-        );
+    public VerificarDocumentoPersonalResponse verificarDocumento(@Valid @RequestBody VerificarDocumentoPersonalRequest request) {
+        return usuarioInternoService.verificarDocumento(request.tipoDocumentoId(), request.numeroDocumento());
+    }
+
+
+
+    @Operation(
+        summary = "Subir fotografía del odontólogo",
+        description = "Registra o reemplaza la fotografía profesional de un odontólogo."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Fotografía actualizada exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Archivo inválido o de formato no permitido"),
+        @ApiResponse(responseCode = "404", description = "Usuario interno u odontólogo no encontrado")
+    })
+    @PutMapping(value = "/{id}/foto", consumes = "multipart/form-data")
+    public UsuarioInternoResponse subirFoto(@PathVariable Long id, @RequestPart("archivo") MultipartFile archivo) {
+        odontologoFotoService.subirPorUsuario(id, archivo);
+        return usuarioInternoService.obtener(id);
+    }
+
+
+
+    @Operation(
+        summary = "Eliminar fotografía del odontólogo",
+        description = "Elimina la fotografía profesional de un odontólogo si tiene una registrada."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Fotografía eliminada exitosamente"),
+        @ApiResponse(responseCode = "404", description = "Usuario interno no encontrado")
+    })
+    @DeleteMapping("/{id}/foto")
+    public UsuarioInternoResponse eliminarFoto(@PathVariable Long id) {
+        odontologoFotoService.eliminarPorUsuario(id);
+        return usuarioInternoService.obtener(id);
     }
 }

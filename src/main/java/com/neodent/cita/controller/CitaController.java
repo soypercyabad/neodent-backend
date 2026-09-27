@@ -3,24 +3,27 @@ package com.neodent.cita.controller;
 import com.neodent.cita.dto.request.CancelarCitaRequest;
 import com.neodent.cita.dto.request.ConfirmarCitaRequest;
 import com.neodent.cita.dto.request.CrearReservaCitaRequest;
+import com.neodent.cita.dto.request.LiberarReservaCitaRequest;
 import com.neodent.cita.dto.request.MarcarNoAsistioRequest;
 import com.neodent.cita.dto.request.ReprogramarCitaRequest;
 import com.neodent.cita.dto.response.CitaResponse;
+import com.neodent.cita.dto.response.DetalleCitaResponse;
 import com.neodent.cita.dto.response.DisponibilidadCitaResponse;
 import com.neodent.cita.dto.response.ReservaCitaResponse;
 import com.neodent.cita.service.CitaService;
 import com.neodent.cita.service.DisponibilidadCitaService;
 import com.neodent.cita.service.ReservaCitaService;
+import com.neodent.shared.response.PaginaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import com.neodent.shared.response.PaginaResponse;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -39,6 +42,7 @@ public class CitaController {
     private final DisponibilidadCitaService disponibilidadCitaService;
 
 
+
     @Operation(
         summary = "Reservar horario temporalmente",
         description = "Bloquea un horario durante 10 minutos mientras se completa el proceso de agendamiento."
@@ -53,6 +57,26 @@ public class CitaController {
         Long usuarioId = Long.valueOf(jwt.getSubject());
         List<String> roles = jwt.getClaimAsStringList("roles");
         return reservaCitaService.crearHold(request, usuarioId, roles);
+    }
+
+
+
+    @Operation(
+        summary = "Liberar reserva temporal",
+        description = "Permite al paciente autenticado liberar su HOLD antes de que expire."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Solicitud de liberación procesada"),
+        @ApiResponse(responseCode = "400", description = "Token de reserva inválido")
+    })
+    @PostMapping("/hold/release")
+    public ResponseEntity<Void> liberarHold(
+        @Valid @RequestBody LiberarReservaCitaRequest request,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        Long usuarioId = Long.valueOf(jwt.getSubject());
+        reservaCitaService.liberarHold(request.getTokenReserva(), usuarioId);
+        return ResponseEntity.noContent().build();
     }
 
 
@@ -183,6 +207,11 @@ public class CitaController {
         summary = "Iniciar atención",
         description = "Cambia una cita CONFIRMADA al estado EN_ATENCION y registra el cambio en historial_cita."
     )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Atención iniciada correctamente"),
+        @ApiResponse(responseCode = "404", description = "Cita no encontrada"),
+        @ApiResponse(responseCode = "409", description = "La cita no se encuentra en estado CONFIRMADA")
+    })
     @PutMapping("/{citaId}/iniciar-atencion")
     public CitaResponse iniciarAtencion(@PathVariable Long citaId, @AuthenticationPrincipal Jwt jwt) {
         Long usuarioId = Long.valueOf(jwt.getSubject());
@@ -195,6 +224,11 @@ public class CitaController {
         summary = "Finalizar atención",
         description = "Cambia una cita EN_ATENCION al estado ATENDIDA y registra el cambio en historial_cita."
     )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Atención finalizada correctamente"),
+        @ApiResponse(responseCode = "404", description = "Cita no encontrada"),
+        @ApiResponse(responseCode = "409", description = "La cita no se encuentra en estado EN_ATENCION")
+    })
     @PutMapping("/{citaId}/finalizar-atencion")
     public CitaResponse finalizarAtencion(@PathVariable Long citaId, @AuthenticationPrincipal Jwt jwt) {
         Long usuarioId = Long.valueOf(jwt.getSubject());
@@ -250,6 +284,7 @@ public class CitaController {
     }
 
 
+
     @Operation(
         summary = "Consultar agenda operativa",
         description = "Obtiene las citas registradas y permite filtrar opcionalmente por fecha, odontólogo, estado y sede."
@@ -265,5 +300,37 @@ public class CitaController {
         @RequestParam(required = false) Integer sedeId
     ) {
         return citaService.obtenerAgenda(fecha, odontologoId, estado, sedeId);
+    }
+
+
+
+    @Operation(
+        summary = "Consultar detalle de una cita",
+        description = "Obtiene el detalle completo de una cita con información del paciente, odontólogo, servicio, sede y estado."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Detalle obtenido correctamente"),
+        @ApiResponse(responseCode = "404", description = "Cita no encontrada o sin acceso")
+    })
+    @GetMapping("/detalle/{citaId}")
+    public DetalleCitaResponse obtenerDetalle(@PathVariable Long citaId, @AuthenticationPrincipal Jwt jwt) {
+        Long usuarioId = Long.valueOf(jwt.getSubject());
+        List<String> roles = jwt.getClaimAsStringList("roles");
+
+        return citaService.obtenerDetalle(citaId, usuarioId, roles);
+    }
+
+
+
+    @Operation(
+        summary = "Consultar agenda administrativa con información detallada",
+        description = "Obtiene las citas registradas con detalle completo, permitiendo filtrar por fecha."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Agenda obtenida correctamente")
+    })
+    @GetMapping("/agenda-detalle")
+    public List<DetalleCitaResponse> obtenerAgendaDetallada(@RequestParam(required = false) LocalDate fecha) {
+        return citaService.obtenerAgendaDetallada(fecha);
     }
 }

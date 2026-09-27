@@ -58,7 +58,17 @@ public class SecurityConfig {
                     "/api/auth/**"
                 ).permitAll()
 
-                /* Gestión administrativa de pacientes */
+                /* Consulta de pacientes */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/pacientes/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+
+                /* Gestión de pacientes */
                 .requestMatchers(
                     "/api/pacientes/**"
                 ).hasAnyRole(
@@ -84,7 +94,7 @@ public class SecurityConfig {
                     AppConstants.Roles.PACIENTE
                 )
 
-                /* Crear HOLD y convertir HOLD en una cita PROGRAMADA.*/
+                /* Crear HOLD y convertir HOLD en una cita PROGRAMADA. */
                 .requestMatchers(
                     HttpMethod.POST,
                     "/api/citas/hold",
@@ -92,6 +102,14 @@ public class SecurityConfig {
                 ).hasAnyRole(
                     AppConstants.Roles.ADMIN,
                     AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.PACIENTE
+                )
+
+                /* Liberar reservas temporales del paciente autenticado. */
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/citas/hold/release"
+                ).hasRole(
                     AppConstants.Roles.PACIENTE
                 )
 
@@ -131,6 +149,62 @@ public class SecurityConfig {
                     AppConstants.Roles.ADMIN,
                     AppConstants.Roles.RECEPCIONISTA
                 )
+                
+                /* Administración de especialidades: únicamente ADMIN. */
+                .requestMatchers(
+                    "/api/especialidades/admin",
+                    "/api/especialidades/admin/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                /* Catálogos de consulta necesarios para el agendamiento. */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/especialidades",
+                    "/api/citas/catalogo/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
+                )
+
+                /* Crear, editar y cambiar el estado de las especialidades. */
+                .requestMatchers(
+                    "/api/especialidades",
+                    "/api/especialidades/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                /* Administración de servicios: únicamente ADMIN. */
+                .requestMatchers(
+                    "/api/servicios",
+                    "/api/servicios/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                /* Consultar detalle de una cita según el usuario autenticado. */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/citas/detalle/*"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
+                )
+
+                /* Consultar agenda administrativa detallada. */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/citas/agenda-detalle"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA
+                )
 
                 /* Cualquier otra operación de citas queda para Administración/Recepción.*/
                 .requestMatchers(
@@ -158,18 +232,37 @@ public class SecurityConfig {
                     AppConstants.Roles.RECEPCIONISTA
                 )
 
+                /* Fotografías profesionales de odontólogos */
                 .requestMatchers(
-                    HttpMethod.GET, 
-                    "/api/especialidades/**"
-                ).hasAnyRole(
+                    HttpMethod.GET,
+                    "/api/odontologos/*/foto"
+                )
+                .hasAnyRole(
                     AppConstants.Roles.ADMIN,
                     AppConstants.Roles.RECEPCIONISTA,
-                    AppConstants.Roles.ODONTOLOGO
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
                 )
 
                 /* Usuarios internos */
                 .requestMatchers(
                     "/api/usuarios-internos/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                /* Administración de sedes: únicamente ADMIN. */
+                .requestMatchers(
+                    "/api/sedes",
+                    "/api/sedes/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                /* Catálogo de roles: solo ADMIN */
+                .requestMatchers(
+                    "/api/roles",
+                    "/api/roles/**"
                 ).hasRole(
                     AppConstants.Roles.ADMIN
                 )

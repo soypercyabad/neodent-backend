@@ -11,11 +11,14 @@ import com.neodent.dni.DniService;
 import com.neodent.dni.dto.DniResponse;
 import com.neodent.paciente.dto.CrearPacienteRequest;
 import com.neodent.paciente.model.Paciente;
+import com.neodent.paciente.model.TipoDocumento;
 import com.neodent.paciente.repository.PacienteRepository;
+import com.neodent.paciente.repository.TipoDocumentoRepository;
 import com.neodent.paciente.service.PacienteService;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.BusinessException;
 import com.neodent.shared.exception.ConflictException;
+import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.shared.exception.UnauthorizedException;
 import com.neodent.usuario.model.EstadoUsuario;
 import com.neodent.usuario.model.Rol;
@@ -27,12 +30,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class PatientRegistrationService {
-
     private final PacienteRepository pacienteRepository;
+    private final TipoDocumentoRepository tipoDocumentoRepository;
     private final DniService dniService;
     private final TurnstileService turnstileService;
     private final RegistrationRateLimitService rateLimitService;
@@ -43,32 +47,33 @@ public class PatientRegistrationService {
     private final PacienteService pacienteService;
     private final OtpService otpService;
 
-    public PatientRegistrationCheckResponse verificarDni(String dni, String turnstileToken, String ip) {
-        String numeroDocumento = dni.trim();
+    public PatientRegistrationCheckResponse verificarDocumento(String codigo, String numeroDocumento, String turnstileToken, String ip) {
         rateLimitService.validar(ip);
         turnstileService.validar(turnstileToken, ip);
 
-        boolean existe = pacienteRepository.existsByTipoDocumentoCodigoAndNumeroDocumento(
-            AppConstants.TiposDocumento.DNI,
-            numeroDocumento
-        );
+        TipoDocumento tipo = buscarTipoDocumento(codigo);
+        String documento = normalizarYValidarDocumento(tipo, numeroDocumento);
 
-        if (existe) {
-            throw new ConflictException("Ya existe un paciente registrado con este DNI");
-        }
+        if (pacienteRepository.existsByTipoDocumentoCodigoAndNumeroDocumento(tipo.getCodigo(), documento))
+            throw new ConflictException("Ya existe un paciente registrado con este documento");
+
+        if (!"DNI".equalsIgnoreCase(tipo.getCodigo()))
+            return new PatientRegistrationCheckResponse(tipo.getCodigo(), documento, null, null, null, true);
 
         try {
-            DniResponse response = dniService.buscarPorDni(numeroDocumento);
+            DniResponse response = dniService.buscarPorDni(documento);
             return new PatientRegistrationCheckResponse(
-                response.dni(),
-                response.nombres(),
-                response.apellidoPaterno(),
-                response.apellidoMaterno(),
-                false
+                tipo.getCodigo(), documento, response.nombres(),
+                response.apellidoPaterno(), response.apellidoMaterno(), false
             );
         } catch (BusinessException ex) {
-            return new PatientRegistrationCheckResponse(numeroDocumento, null, null, null, true);
+            return new PatientRegistrationCheckResponse(tipo.getCodigo(), documento, null, null, null, true);
         }
+    }
+
+    /* Compatibilidad temporal con /check-dni mientras migras el frontend. */
+    public PatientRegistrationCheckResponse verificarDni(String dni, String turnstileToken, String ip) {
+        return verificarDocumento("DNI", dni, turnstileToken, ip);
     }
 
     @Transactional
@@ -76,15 +81,18 @@ public class PatientRegistrationService {
         rateLimitService.validar(ip);
         turnstileService.validar(request.turnstileToken(), ip);
 
-        String email = request.email().trim().toLowerCase();
+        TipoDocumento tipo = buscarTipoDocumento(request.tipoDocumento());
+        String documento = normalizarYValidarDocumento(tipo, request.numeroDocumento());
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
 
-        if (usuarioRepository.existsByCorreoIgnoreCase(email)) {
+        if (usuarioRepository.existsByCorreoIgnoreCase(email))
             throw new ConflictException("Ya existe una cuenta registrada con este correo");
-        }
+
+        if (pacienteRepository.existsByTipoDocumentoCodigoAndNumeroDocumento(tipo.getCodigo(), documento))
+            throw new ConflictException("Ya existe un paciente registrado con este documento");
 
         Rol rolPaciente = rolRepository.findByNombreAndActivoTrue(AppConstants.Roles.PACIENTE)
             .orElseThrow(() -> new IllegalStateException("Rol PACIENTE no configurado"));
-
         EstadoUsuario pendiente = estadoUsuarioRepository.findByNombreAndActivoTrue(AppConstants.EstadosUsuario.PENDIENTE)
             .orElseThrow(() -> new IllegalStateException("Estado PENDIENTE no configurado"));
 
@@ -100,24 +108,16 @@ public class PatientRegistrationService {
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
 
         CrearPacienteRequest pacienteRequest = new CrearPacienteRequest(
-            AppConstants.TiposDocumento.DNI,
-            request.dni(),
-            request.nombres(),
-            request.apellidoPaterno(),
-            request.apellidoMaterno(),
-            request.fechaNacimiento(),
-            request.telefono(),
-            email,
-            request.direccion()
+            tipo.getCodigo(), documento, request.nombres(), request.apellidoPaterno(),
+            request.apellidoMaterno(), request.fechaNacimiento(), request.telefono(),
+            email, request.direccion()
         );
 
         Paciente paciente = pacienteService.crearConUsuario(pacienteRequest, usuarioGuardado);
         OtpService.OtpGenerado otp = otpService.generarEmailVerification(usuarioGuardado);
 
         return new PatientRegistrationResponse(
-            paciente.getId(),
-            usuarioGuardado.getId(),
-            otp.id(),
+            paciente.getId(), usuarioGuardado.getId(), otp.id(),
             "Registro creado. Verifique su correo electrónico."
         );
     }
@@ -125,10 +125,8 @@ public class PatientRegistrationService {
     @Transactional
     public VerifyEmailResponse verificarEmail(VerifyEmailRequest request) {
         Usuario usuario = otpService.verificarEmailOtp(request.challengeId(), request.codigo());
-
-        if (Boolean.TRUE.equals(usuario.getCorreoVerificado())) {
+        if (Boolean.TRUE.equals(usuario.getCorreoVerificado()))
             throw new ConflictException("El correo electrónico ya fue verificado");
-        }
 
         EstadoUsuario activo = estadoUsuarioRepository.findByNombreAndActivoTrue(AppConstants.EstadosUsuario.ACTIVO)
             .orElseThrow(() -> new IllegalStateException("Estado ACTIVO no configurado"));
@@ -136,7 +134,6 @@ public class PatientRegistrationService {
         usuario.setCorreoVerificado(true);
         usuario.setEstado(activo);
         usuarioRepository.save(usuario);
-
         return new VerifyEmailResponse(true, "Correo verificado. La cuenta ya se encuentra activa.");
     }
 
@@ -144,25 +141,44 @@ public class PatientRegistrationService {
     public RestartEmailVerificationResponse reiniciarVerificacionEmail(RestartEmailVerificationRequest request, String ip) {
         rateLimitService.validar(ip);
         turnstileService.validar(request.turnstileToken(), ip);
-
-        String email = request.email().trim().toLowerCase();
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
 
         Usuario usuario = usuarioRepository.findByCorreoIgnoreCase(email)
             .orElseThrow(() -> new UnauthorizedException("Correo o contraseña incorrectos"));
 
-        if (!passwordEncoder.matches(request.password(), usuario.getHashContrasena())) {
+        if (!passwordEncoder.matches(request.password(), usuario.getHashContrasena()))
             throw new UnauthorizedException("Correo o contraseña incorrectos");
-        }
-
-        if (Boolean.TRUE.equals(usuario.getCorreoVerificado())) {
+        if (Boolean.TRUE.equals(usuario.getCorreoVerificado()))
             throw new ConflictException("El correo electrónico ya fue verificado");
-        }
-
-        if (!AppConstants.EstadosUsuario.PENDIENTE.equalsIgnoreCase(usuario.getEstado().getNombre())) {
+        if (!AppConstants.EstadosUsuario.PENDIENTE.equalsIgnoreCase(usuario.getEstado().getNombre()))
             throw new ConflictException("La cuenta no se encuentra pendiente de verificación");
-        }
 
         OtpService.OtpGenerado nuevo = otpService.reiniciarEmailVerification(usuario);
         return new RestartEmailVerificationResponse(nuevo.id(), "Se envió un nuevo código de verificación");
+    }
+
+    private TipoDocumento buscarTipoDocumento(String codigo) {
+        if (codigo == null || codigo.isBlank()) throw new BusinessException("Selecciona un tipo de documento");
+        return tipoDocumentoRepository.findByCodigoAndActivoTrue(codigo.trim().toUpperCase(Locale.ROOT))
+            .orElseThrow(() -> new ResourceNotFoundException("Tipo de documento no válido"));
+    }
+
+    private String normalizarYValidarDocumento(TipoDocumento tipo, String valor) {
+        if (valor == null || valor.isBlank()) throw new BusinessException("El número de documento es obligatorio");
+
+        String documento = valor.trim();
+        if (!"DNI".equalsIgnoreCase(tipo.getCodigo())) documento = documento.toUpperCase(Locale.ROOT);
+
+        int longitud = documento.length();
+        int minimo = tipo.getLongitudMin() == null ? 1 : tipo.getLongitudMin();
+        int maximo = tipo.getLongitudMax() == null ? 20 : tipo.getLongitudMax();
+
+        if (longitud < minimo || longitud > maximo)
+            throw new BusinessException("El documento debe tener entre " + minimo + " y " + maximo + " caracteres");
+
+        if ("DNI".equalsIgnoreCase(tipo.getCodigo()) && !documento.matches("\\d{8}"))
+            throw new BusinessException("El DNI debe contener exactamente 8 dígitos");
+
+        return documento;
     }
 }

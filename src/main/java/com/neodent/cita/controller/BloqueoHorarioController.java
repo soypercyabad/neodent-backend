@@ -25,6 +25,8 @@ public class BloqueoHorarioController {
 
     private final BloqueoHorarioService bloqueoService;
 
+
+
     @Operation(
         summary = "Listar bloqueos de agenda",
         description = "Retorna todos los bloqueos de agenda activa"

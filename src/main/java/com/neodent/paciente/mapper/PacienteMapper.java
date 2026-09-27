@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 public class PacienteMapper {
 
     public PacienteResponse toResponse(Paciente paciente) {
-
         return new PacienteResponse(
             paciente.getId(),
             paciente.getTipoDocumento().getCodigo(),
@@ -16,9 +15,15 @@ public class PacienteMapper {
             paciente.getNombres(),
             paciente.getApellidoPaterno(),
             paciente.getApellidoMaterno(),
+            paciente.getFechaNacimiento(),
             paciente.getTelefono(),
             paciente.getCorreo(),
-            paciente.getUsuario() != null
+            paciente.getDireccion(),
+            paciente.getActivo(),
+            paciente.getUsuario() != null ? paciente.getUsuario().getId(): null,
+            paciente.getUsuario() != null,
+            paciente.getFechaCreacion(),
+            paciente.getFechaActualizacion()
         );
     }
 }

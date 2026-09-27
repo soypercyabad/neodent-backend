@@ -12,6 +12,7 @@ import com.neodent.especialidad.repository.OdontologoEspecialidadRepository;
 import com.neodent.sede.repository.SedeRepository;
 import com.neodent.servicio.model.Servicio;
 import com.neodent.servicio.repository.ServicioRepository;
+import com.neodent.servicio.repository.ServicioSedeRepository;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
@@ -39,6 +40,7 @@ public class DisponibilidadCitaService {
     private final BloqueoHorarioRepository bloqueoRepository;
     private final CitaRepository citaRepository;
     private final ReservaCitaTemporalRepository reservaRepository;
+    private final ServicioSedeRepository servicioSedeRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -62,6 +64,10 @@ public class DisponibilidadCitaService {
 
         Servicio servicio = servicioRepository.findByIdAndActivoTrue(servicioId)
             .orElseThrow(() -> new ResourceNotFoundException("Servicio no disponible"));
+
+        if (!servicioSedeRepository.existsByIdServicioAndIdSedeAndActivoTrue(servicioId, sedeId)) {
+            throw new ConflictException("El servicio no está disponible en la sede seleccionada");
+        }
 
         if (!servicio.getEspecialidad().getId().equals(oe.getEspecialidad().getId())) {
             throw new ConflictException("El servicio no pertenece a la especialidad seleccionada");

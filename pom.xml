@@ -128,6 +128,21 @@
 			<groupId>com.github.ben-manes.caffeine</groupId>
 			<artifactId>caffeine</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.github.usefulness</groupId>
+			<artifactId>webp-imageio</artifactId>
+			<version>0.11.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.twelvemonkeys.imageio</groupId>
+			<artifactId>imageio-webp</artifactId>
+			<version>3.12.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.twelvemonkeys.imageio</groupId>
+			<artifactId>imageio-jpeg</artifactId>
+			<version>3.12.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

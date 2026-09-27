@@ -9,12 +9,14 @@ import com.neodent.cita.repository.HorarioOdontologoRepository;
 import com.neodent.cita.repository.ReservaCitaTemporalRepository;
 import com.neodent.especialidad.model.OdontologoEspecialidad;
 import com.neodent.especialidad.repository.OdontologoEspecialidadRepository;
+import com.neodent.odontologo.repository.OdontologoRepository;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.sede.model.Sede;
 import com.neodent.sede.repository.SedeRepository;
 import com.neodent.servicio.model.Servicio;
 import com.neodent.servicio.repository.ServicioRepository;
+import com.neodent.servicio.repository.ServicioSedeRepository;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
@@ -38,10 +40,13 @@ public class ReservaCitaService {
     private final BloqueoHorarioRepository bloqueoRepository;
     private final PacienteRepository pacienteRepository;
     private final OdontologoEspecialidadRepository odontologoEspecialidadRepository;
+    private final OdontologoRepository odontologoRepository;
     private final SedeRepository sedeRepository;
     private final ServicioRepository servicioRepository;
     private final HorarioOdontologoRepository horarioRepository;
+    private final ServicioSedeRepository servicioSedeRepository;
     private final Clock clock;
+
     private final SecureRandom random = new SecureRandom();
 
     @Transactional
@@ -58,6 +63,7 @@ public class ReservaCitaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente asociado al usuario no encontrado"));
         } else {
             if (request.pacienteId() == null) throw new ConflictException("Debe seleccionar un paciente");
+
             paciente = pacienteRepository.findById(request.pacienteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
         }
@@ -79,6 +85,12 @@ public class ReservaCitaService {
                 throw new ConflictException("El servicio no pertenece a la especialidad seleccionada");
             }
 
+            if (!servicioSedeRepository.existsByIdServicioAndIdSedeAndActivoTrue(
+                servicio.getId(), sede.getId()
+            )) {
+                throw new ConflictException("El servicio no se ofrece en la sede seleccionada");
+            }
+
             duracionMinutos = servicio.getDuracionMinutos();
         }
 
@@ -86,18 +98,21 @@ public class ReservaCitaService {
         LocalDateTime fin = inicio.plusMinutes(duracionMinutos);
         Long odontologoId = oe.getOdontologo().getId();
 
-        boolean bloqueado = bloqueoRepository.contarBloqueos(odontologoId, sede.getId(), inicio, fin) > 0;
-        if (bloqueado) {
-            throw new ConflictException("El odontólogo no está disponible en ese horario");
+        odontologoRepository.bloquearParaReserva(odontologoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Odontólogo no encontrado"));
+
+        ahora = LocalDateTime.now(clock);
+        if (!inicio.isAfter(ahora)) {
+            throw new ConflictException("El horario seleccionado ya no está disponible");
         }
 
+        boolean bloqueado = bloqueoRepository.contarBloqueos(odontologoId, sede.getId(), inicio, fin) > 0;
+        if (bloqueado) throw new ConflictException("El odontólogo no está disponible en ese horario");
+
         byte diaSemana = (byte) inicio.getDayOfWeek().getValue();
+
         boolean dentroHorario = horarioRepository.existeHorarioDisponible(
-            oe.getId(),
-            sede.getId(),
-            diaSemana,
-            inicio.toLocalTime(),
-            fin.toLocalTime()
+            oe.getId(), sede.getId(), diaSemana, inicio.toLocalTime(), fin.toLocalTime()
         );
 
         if (!dentroHorario) {
@@ -129,13 +144,15 @@ public class ReservaCitaService {
         reservaRepository.save(reserva);
 
         return new ReservaCitaResponse(
-            token,
-            inicio,
-            fin,
-            expiresAt,
+            token, inicio, fin, expiresAt,
             Duration.between(ahora, expiresAt).getSeconds(),
             "Horario reservado temporalmente"
         );
+    }
+
+    @Transactional
+    public void liberarHold(String tokenReserva, Long usuarioId) {
+        reservaRepository.liberarHold(tokenReserva, usuarioId, LocalDateTime.now(clock));
     }
 
     private String generarToken() {
