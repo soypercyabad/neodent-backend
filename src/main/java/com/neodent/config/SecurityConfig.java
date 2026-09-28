@@ -109,7 +109,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     HttpMethod.POST,
                     "/api/citas/hold/release"
-                ).hasRole(
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
                     AppConstants.Roles.PACIENTE
                 )
 
@@ -260,12 +262,12 @@ public class SecurityConfig {
                 )
 
                 /* Catálogo de roles: solo ADMIN */
-                .requestMatchers(
-                    "/api/roles",
-                    "/api/roles/**"
-                ).hasRole(
-                    AppConstants.Roles.ADMIN
-                )
+.requestMatchers(
+    "/api/roles",
+    "/api/roles/**"
+).hasRole(
+    AppConstants.Roles.ADMIN
+)
 
                 /* Todo lo no definido explícitamente queda bloqueado.*/
                 .anyRequest().denyAll()

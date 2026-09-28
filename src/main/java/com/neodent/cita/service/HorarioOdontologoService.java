@@ -2,6 +2,7 @@ package com.neodent.cita.service;
 
 import com.neodent.cita.dto.request.ActualizarHorarioOdontologoRequest;
 import com.neodent.cita.dto.request.CrearHorarioOdontologoRequest;
+import com.neodent.cita.dto.response.HorarioOdontologoCatalogoResponse;
 import com.neodent.cita.dto.response.HorarioOdontologoResponse;
 import com.neodent.cita.model.HorarioOdontologo;
 import com.neodent.cita.repository.HorarioOdontologoRepository;
@@ -100,6 +101,30 @@ public class HorarioOdontologoService {
             .orElseThrow(() -> new ResourceNotFoundException("Horario no encontrado"));
 
         horario.setActivo(false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HorarioOdontologoCatalogoResponse> listarCatalogoOdontologos() {
+        return odontologoEspecialidadRepository
+            .listarActivosParaHorarios()
+            .stream()
+            .map(oe -> {
+                var odontologo = oe.getOdontologo();
+                var personal = odontologo.getPersonal();
+
+                return new HorarioOdontologoCatalogoResponse(
+                    oe.getId(),
+                    odontologo.getId(),
+                    personal.getNombres(),
+                    personal.getApellidoPaterno(),
+                    personal.getApellidoMaterno(),
+                    odontologo.getNumeroColegiatura(),
+                    oe.getEspecialidad().getId(),
+                    oe.getEspecialidad().getNombre(),
+                    odontologo.getFotoNombreArchivo() != null && !odontologo.getFotoNombreArchivo().isBlank()
+                );
+            })
+            .toList();
     }
 
     @Transactional(readOnly = true)

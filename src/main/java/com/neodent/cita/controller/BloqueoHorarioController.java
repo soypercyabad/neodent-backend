@@ -36,10 +36,12 @@ public class BloqueoHorarioController {
         @ApiResponse(responseCode = "401", description = "No autorizado")
     })
     @GetMapping
-    public List<BloqueoHorarioResponse> listar() {
-        return bloqueoService.listar();
+    public List<BloqueoHorarioResponse> listar(
+        @RequestParam(required = false) Long odontologoId,
+        @RequestParam(required = false) Integer sedeId
+    ) {
+        return bloqueoService.listar(odontologoId, sedeId);
     }
-
 
 
     @Operation(

@@ -88,6 +88,7 @@ public final class AppConstants {
     }
 
     public static final class AccionesHistorialCita {
+        public static final String CREADA = "CREADA";
         public static final String REPROGRAMADA = "REPROGRAMADA";
         public static final String CANCELADA = "CANCELADA";
         public static final String NO_ASISTIO = "NO_ASISTIO";

@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -28,9 +30,17 @@ public class BloqueoHorarioService {
     private final SedeRepository sedeRepository;
     private final UsuarioRepository usuarioRepository;
     private final CitaRepository citaRepository;
+    private final Clock clock;
 
     @Transactional
     public BloqueoHorarioResponse crear(CrearBloqueoHorarioRequest request, Long usuarioId) {
+        
+        LocalDateTime ahora = LocalDateTime.now(clock);
+
+        if (request.fechaInicio().isBefore(ahora)) {
+            throw new ConflictException("No se puede crear un bloqueo en una fecha pasada");
+        }
+        
         if (!request.fechaFin().isAfter(request.fechaInicio())) {
             throw new ConflictException("La fecha fin debe ser posterior a la fecha inicio");
         }
@@ -88,8 +98,9 @@ public class BloqueoHorarioService {
     }
 
     @Transactional(readOnly = true)
-    public List<BloqueoHorarioResponse> listar() {
-        return bloqueoRepository.findAllByOrderByFechaInicioDesc()
+    public List<BloqueoHorarioResponse> listar(Long odontologoId, Integer sedeId) {
+        return bloqueoRepository
+            .listarFiltrado(odontologoId, sedeId)
             .stream()
             .map(this::mapear)
             .toList();

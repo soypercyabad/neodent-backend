@@ -61,4 +61,16 @@ public interface BloqueoHorarioRepository
         @Param("inicio") LocalDateTime inicio,
         @Param("fin") LocalDateTime fin
     );
+
+    @Query("""
+        SELECT b
+        FROM BloqueoHorario b
+        WHERE (:odontologoId IS NULL OR b.odontologo.id = :odontologoId)
+        AND (:sedeId IS NULL OR b.sede.id = :sedeId)
+        ORDER BY b.fechaInicio DESC
+    """)
+    List<BloqueoHorario> listarFiltrado(
+        @Param("odontologoId") Long odontologoId,
+        @Param("sedeId") Integer sedeId
+    );
 }

@@ -7,6 +7,7 @@ import com.neodent.cita.dto.request.MarcarNoAsistioRequest;
 import com.neodent.cita.dto.request.ReprogramarCitaRequest;
 import com.neodent.cita.dto.response.CitaResponse;
 import com.neodent.cita.dto.response.DetalleCitaResponse;
+import com.neodent.cita.dto.response.HistorialCitaResponse;
 import com.neodent.cita.model.Cita;
 import com.neodent.cita.model.EstadoCita;
 import com.neodent.cita.model.HistorialCita;
@@ -62,6 +63,8 @@ public class CitaService {
     private final EmailService emailService;
     private final ServicioSedeRepository servicioSedeRepository;
     private final Clock clock;
+    private static final long TOLERANCIA_NO_ASISTENCIA_MINUTOS = 15;
+    private static final long TOLERANCIA_INICIO_ATENCION_MINUTOS = 15;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -148,6 +151,18 @@ public class CitaService {
         cita.setCreadoPor(usuario);
 
         Cita citaGuardada = citaRepository.save(cita);
+
+        HistorialCita historialCreacion = new HistorialCita();
+        historialCreacion.setCita(citaGuardada);
+        historialCreacion.setUsuario(usuario);
+        historialCreacion.setAccion(AppConstants.AccionesHistorialCita.CREADA);
+        historialCreacion.setEstadoAnterior(null);
+        historialCreacion.setEstadoNuevo(estadoProgramada);
+        historialCreacion.setFechaHoraAnterior(null);
+        historialCreacion.setFechaHoraNueva(citaGuardada.getFechaHoraInicio());
+        historialCreacion.setMotivo("Cita programada");
+
+        historialCitaRepository.save(historialCreacion);
 
         reserva.setConfirmada(true);
         reservaRepository.save(reserva);
@@ -247,6 +262,10 @@ public class CitaService {
             .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
 
         String estadoActual = cita.getEstado().getNombre();
+
+        if (!cita.getFechaHoraInicio().isAfter(ahora)) {
+            throw new ConflictException("Una cita cuya hora ya pasó no puede reprogramarse. Registra la inasistencia y crea una nueva cita.");
+        }
 
         if (!AppConstants.EstadosCita.PROGRAMADA.equals(estadoActual)
             && !AppConstants.EstadosCita.CONFIRMADA.equals(estadoActual)) {
@@ -412,6 +431,11 @@ public class CitaService {
             .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
 
         String estadoActual = cita.getEstado().getNombre();
+        LocalDateTime ahora = LocalDateTime.now(clock);
+
+        if (!cita.getFechaHoraInicio().isAfter(ahora)) {
+            throw new ConflictException("Esta cita ya no puede cancelarse porque su hora programada ya pasó.");
+        }
 
         boolean cancelable =
             AppConstants.EstadosCita.PROGRAMADA.equals(estadoActual)
@@ -479,6 +503,13 @@ public class CitaService {
 
         String estadoActual = cita.getEstado().getNombre();
 
+        LocalDateTime ahora = LocalDateTime.now(clock);
+        LocalDateTime limiteAsistencia = cita.getFechaHoraInicio().plusMinutes(TOLERANCIA_NO_ASISTENCIA_MINUTOS);
+
+        if (ahora.isBefore(limiteAsistencia)) {
+            throw new ConflictException("La cita todavía no puede marcarse como NO_ASISTIO");
+        }
+
         boolean permitido = AppConstants.EstadosCita.PROGRAMADA.equals(estadoActual)
             || AppConstants.EstadosCita.CONFIRMADA.equals(estadoActual);
 
@@ -540,6 +571,10 @@ public class CitaService {
             throw new ConflictException("La cita no puede confirmarse en su estado actual");
         }
 
+        if (!cita.getFechaHoraInicio().isAfter(ahora)) {
+            throw new ConflictException("Esta cita no puede confirmarse porque su hora programada ya pasó.");
+        }
+
         Usuario usuario = usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
 
@@ -559,8 +594,8 @@ public class CitaService {
         historial.setAccion(AppConstants.AccionesHistorialCita.CONFIRMADA);
         historial.setEstadoAnterior(estadoAnterior);
         historial.setEstadoNuevo(estadoConfirmada);
-        historial.setFechaHoraAnterior(citaGuardada.getFechaHoraInicio());
-        historial.setFechaHoraNueva(citaGuardada.getFechaHoraInicio());
+        historial.setFechaHoraAnterior(null);
+        historial.setFechaHoraNueva(null);
         historial.setMotivo("Asistencia confirmada");
 
         historialCitaRepository.save(historial);
@@ -588,6 +623,12 @@ public class CitaService {
         validarOdontologoPropietario(cita, usuarioId);
 
         String estadoActual = cita.getEstado().getNombre();
+        LocalDateTime ahora = LocalDateTime.now(clock);
+        LocalDateTime inicioPermitido = cita.getFechaHoraInicio().minusMinutes(TOLERANCIA_INICIO_ATENCION_MINUTOS);
+
+        if (ahora.isBefore(inicioPermitido)) {
+            throw new ConflictException("La atención solo puede iniciarse hasta 15 minutos antes de la hora programada");
+        }
 
         if (!AppConstants.EstadosCita.CONFIRMADA.equals(estadoActual)) {
             throw new ConflictException("La cita no puede iniciar atención en su estado actual");
@@ -856,30 +897,86 @@ public class CitaService {
 
     private DetalleCitaResponse mapearDetalle(Cita cita) {
         var paciente = cita.getPaciente();
-        var personal = cita.getOdontologoEspecialidad().getOdontologo().getPersonal();
+        var odontologo = cita.getOdontologoEspecialidad().getOdontologo();
+        var personal = odontologo.getPersonal();
         var servicio = cita.getServicioSolicitado();
         var sede = cita.getSede();
+        var creador = cita.getCreadoPor();
+
+        String creadoPor = creador.getAliasInterno() != null ? creador.getAliasInterno() : creador.getCorreo();
 
         return new DetalleCitaResponse(
             cita.getId(),
+
             paciente.getId(),
-            nombreCompleto(paciente.getNombres(), paciente.getApellidoPaterno(), paciente.getApellidoMaterno()),
+            nombreCompleto(
+                paciente.getNombres(),
+                paciente.getApellidoPaterno(),
+                paciente.getApellidoMaterno()
+            ),
+            paciente.getTipoDocumento().getCodigo(),
+            paciente.getNumeroDocumento(),
+            paciente.getTelefono(),
+            paciente.getCorreo(),
+
             cita.getOdontologoEspecialidad().getId(),
-            nombreCompleto(personal.getNombres(), personal.getApellidoPaterno(), personal.getApellidoMaterno()),
+            odontologo.getId(),
+            nombreCompleto(
+                personal.getNombres(),
+                personal.getApellidoPaterno(),
+                personal.getApellidoMaterno()
+            ),
             cita.getOdontologoEspecialidad().getEspecialidad().getNombre(),
+
             sede.getId(),
             sede.getNombre(),
             sede.getDireccion(),
+
             servicio != null ? servicio.getId() : null,
             servicio != null ? servicio.getNombre() : "Servicio no especificado",
+            servicio != null ? servicio.getDescripcion() : null,
+            servicio != null ? servicio.getDuracionMinutos().intValue() : null,
+            servicio != null ? servicio.getPrecioReferencial() : null,
+
             cita.getEstado().getNombre(),
             cita.getFechaHoraInicio(),
-            cita.getFechaHoraFin()
+            cita.getFechaHoraFin(),
+
+            cita.getMotivo(),
+            cita.getObservaciones(),
+            cita.getConfirmadaEn(),
+
+            creadoPor,
+            cita.getFechaCreacion(),
+            cita.getFechaActualizacion()
         );
     }
 
     private String nombreCompleto(String nombres, String apellidoPaterno, String apellidoMaterno) {
         return (nombres + " " + apellidoPaterno + " " +
             (apellidoMaterno != null ? apellidoMaterno : "")).trim();
+    }
+
+    @Transactional(readOnly = true)
+    public List<HistorialCitaResponse> obtenerHistorial(Long citaId) {
+        if (!citaRepository.existsById(citaId)) {
+            throw new ResourceNotFoundException("Cita no encontrada");
+        }
+
+        return historialCitaRepository
+            .findByCitaIdOrderByFechaCreacionDesc(citaId)
+            .stream()
+            .map(h -> new HistorialCitaResponse(
+                h.getId(),
+                h.getAccion(),
+                h.getEstadoAnterior() != null ? h.getEstadoAnterior().getNombre() : null,
+                h.getEstadoNuevo() != null ? h.getEstadoNuevo().getNombre() : null,
+                h.getFechaHoraAnterior(),
+                h.getFechaHoraNueva(),
+                h.getMotivo(),
+                h.getUsuario().getAliasInterno() != null ? h.getUsuario().getAliasInterno() : h.getUsuario().getCorreo(),
+                h.getFechaCreacion()
+            ))
+            .toList();
     }
 }

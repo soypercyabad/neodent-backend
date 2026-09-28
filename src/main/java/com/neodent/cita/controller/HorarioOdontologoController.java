@@ -3,6 +3,7 @@ package com.neodent.cita.controller;
 import com.neodent.cita.dto.request.ActualizarHorarioOdontologoRequest;
 import com.neodent.cita.dto.request.CrearHorarioOdontologoRequest;
 import com.neodent.cita.dto.response.HorarioOdontologoResponse;
+import com.neodent.cita.dto.response.HorarioOdontologoCatalogoResponse;
 import com.neodent.cita.service.HorarioOdontologoService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,5 +94,20 @@ public class HorarioOdontologoController {
     public ResponseEntity<Void> desactivar(@PathVariable Long id) {
         horarioService.desactivar(id);
         return ResponseEntity.noContent().build();
+    }
+
+
+
+    @Operation(
+        summary = "Listar odontólogos y especialidades para horarios",
+        description = "Retorna las relaciones activas odontólogo-especialidad disponibles para configurar horarios"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Odontólogos y especialidades obtenidos correctamente"),
+        @ApiResponse(responseCode = "401", description = "No autorizado")
+    })
+    @GetMapping("/catalogo-odontologos")
+    public List<HorarioOdontologoCatalogoResponse> listarCatalogoOdontologos() {
+        return horarioService.listarCatalogoOdontologos();
     }
 }

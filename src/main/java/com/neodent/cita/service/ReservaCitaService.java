@@ -66,6 +66,10 @@ public class ReservaCitaService {
 
             paciente = pacienteRepository.findById(request.pacienteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+
+            if (!Boolean.TRUE.equals(paciente.getActivo())) {
+                throw new ConflictException("No se puede programar una cita para un paciente inactivo");
+            }
         }
 
         OdontologoEspecialidad oe = odontologoEspecialidadRepository.findByIdAndActivoTrue(request.odontologoEspecialidadId())
@@ -151,8 +155,18 @@ public class ReservaCitaService {
     }
 
     @Transactional
-    public void liberarHold(String tokenReserva, Long usuarioId) {
-        reservaRepository.liberarHold(tokenReserva, usuarioId, LocalDateTime.now(clock));
+    public void liberarHold(String tokenReserva, Long usuarioId, List<String> roles) {
+        LocalDateTime ahora = LocalDateTime.now(clock);
+
+        if (roles != null && roles.contains(AppConstants.Roles.PACIENTE)) {
+            reservaRepository.liberarHoldPaciente(tokenReserva, usuarioId, ahora);
+            return;
+        }
+
+        boolean administrativo = roles != null && (roles.contains(AppConstants.Roles.ADMIN) || roles.contains(AppConstants.Roles.RECEPCIONISTA));
+        if (!administrativo) throw new ConflictException("No tienes permisos para liberar esta reserva");
+
+        reservaRepository.liberarHoldAdministrativo(tokenReserva, ahora);
     }
 
     private String generarToken() {

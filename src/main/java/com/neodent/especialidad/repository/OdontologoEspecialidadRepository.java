@@ -24,4 +24,18 @@ public interface OdontologoEspecialidadRepository extends JpaRepository<Odontolo
     Optional<OdontologoEspecialidad> findByOdontologoIdAndEspecialidadId(Long odontologoId, Integer especialidadId);
 
     boolean existsByEspecialidadIdAndActivoTrue(Integer especialidadId);
+
+    @Query("""
+        SELECT oe
+        FROM OdontologoEspecialidad oe
+        JOIN FETCH oe.odontologo o
+        JOIN FETCH o.personal p
+        JOIN FETCH oe.especialidad e
+        WHERE oe.activo = true
+        AND o.activo = true
+        AND p.activo = true
+        AND e.activo = true
+        ORDER BY p.apellidoPaterno ASC, p.nombres ASC, e.nombre ASC
+    """)
+    List<OdontologoEspecialidad> listarActivosParaHorarios();
 }

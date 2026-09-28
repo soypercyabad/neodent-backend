@@ -9,6 +9,7 @@ import com.neodent.cita.dto.request.ReprogramarCitaRequest;
 import com.neodent.cita.dto.response.CitaResponse;
 import com.neodent.cita.dto.response.DetalleCitaResponse;
 import com.neodent.cita.dto.response.DisponibilidadCitaResponse;
+import com.neodent.cita.dto.response.HistorialCitaResponse;
 import com.neodent.cita.dto.response.ReservaCitaResponse;
 import com.neodent.cita.service.CitaService;
 import com.neodent.cita.service.DisponibilidadCitaService;
@@ -70,12 +71,10 @@ public class CitaController {
         @ApiResponse(responseCode = "400", description = "Token de reserva inválido")
     })
     @PostMapping("/hold/release")
-    public ResponseEntity<Void> liberarHold(
-        @Valid @RequestBody LiberarReservaCitaRequest request,
-        @AuthenticationPrincipal Jwt jwt
-    ) {
+    public ResponseEntity<Void> liberarHold(@Valid @RequestBody LiberarReservaCitaRequest request, @AuthenticationPrincipal Jwt jwt) {
         Long usuarioId = Long.valueOf(jwt.getSubject());
-        reservaCitaService.liberarHold(request.getTokenReserva(), usuarioId);
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        reservaCitaService.liberarHold(request.getTokenReserva(), usuarioId, roles);
         return ResponseEntity.noContent().build();
     }
 
@@ -332,5 +331,20 @@ public class CitaController {
     @GetMapping("/agenda-detalle")
     public List<DetalleCitaResponse> obtenerAgendaDetallada(@RequestParam(required = false) LocalDate fecha) {
         return citaService.obtenerAgendaDetallada(fecha);
+    }
+
+
+
+    @Operation(
+    summary = "Obtener historial de cambios de una cita",
+    description = "Muestra la secuencia de cambios de estado de una cita, incluyendo reprogramaciones, cancelaciones y asistencias."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Historial obtenido correctamente"),
+        @ApiResponse(responseCode = "404", description = "Cita no encontrada")
+    })
+    @GetMapping("/{citaId}/historial")
+    public List<HistorialCitaResponse> obtenerHistorial(@PathVariable Long citaId) {
+        return citaService.obtenerHistorial(citaId);
     }
 }

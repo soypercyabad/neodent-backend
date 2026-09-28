@@ -40,11 +40,29 @@ public interface ReservaCitaTemporalRepository extends JpaRepository<ReservaCita
 
     @Modifying
     @Query("""
-        UPDATE ReservaCitaTemporal r SET r.fechaExpiracion = :ahora
+        UPDATE ReservaCitaTemporal r
+        SET r.fechaExpiracion = :ahora
         WHERE r.tokenReserva = :tokenReserva
         AND r.paciente.usuario.id = :usuarioId
-        AND r.confirmada = false AND r.fechaExpiracion > :ahora
+        AND r.confirmada = false
+        AND r.fechaExpiracion > :ahora
     """)
-    int liberarHold(@Param("tokenReserva") String tokenReserva,
-        @Param("usuarioId") Long usuarioId, @Param("ahora") LocalDateTime ahora);
+    int liberarHoldPaciente(
+        @Param("tokenReserva") String tokenReserva,
+        @Param("usuarioId") Long usuarioId,
+        @Param("ahora") LocalDateTime ahora
+    );
+
+    @Modifying
+    @Query("""
+        UPDATE ReservaCitaTemporal r
+        SET r.fechaExpiracion = :ahora
+        WHERE r.tokenReserva = :tokenReserva
+        AND r.confirmada = false
+        AND r.fechaExpiracion > :ahora
+    """)
+    int liberarHoldAdministrativo(
+        @Param("tokenReserva") String tokenReserva,
+        @Param("ahora") LocalDateTime ahora
+    );
 }
