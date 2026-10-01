@@ -6,6 +6,7 @@ import com.neodent.sede.model.Sede;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
@@ -38,6 +39,12 @@ public class HorarioOdontologo {
 
     @Column(name = "hora_fin", nullable = false)
     private LocalTime horaFin;
+
+    @Column(name = "fecha_inicio_vigencia", nullable = false)
+    private LocalDate fechaInicioVigencia;
+
+    @Column(name = "fecha_fin_vigencia")
+    private LocalDate fechaFinVigencia;
 
     @Column(nullable = false)
     private Boolean activo = true;

@@ -16,11 +16,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class HorarioOdontologoService {
+
+    private static final LocalDate FECHA_MAXIMA = LocalDate.of(9999, 12, 31);
 
     private final HorarioOdontologoRepository horarioRepository;
     private final OdontologoEspecialidadRepository odontologoEspecialidadRepository;
@@ -29,6 +33,7 @@ public class HorarioOdontologoService {
     @Transactional
     public HorarioOdontologoResponse crear(CrearHorarioOdontologoRequest request) {
         validarHoras(request.horaInicio(), request.horaFin());
+        validarVigencia(request.fechaInicioVigencia(), request.fechaFinVigencia());
 
         OdontologoEspecialidad oe = odontologoEspecialidadRepository
             .findByIdAndActivoTrue(request.odontologoEspecialidadId())
@@ -42,11 +47,15 @@ public class HorarioOdontologoService {
             oe.getOdontologo().getId(),
             request.diaSemana(),
             request.horaInicio(),
-            request.horaFin()
+            request.horaFin(),
+            request.fechaInicioVigencia(),
+            fechaFinComparacion(request.fechaFinVigencia())
         );
 
         if (cruce) {
-            throw new ConflictException("El horario se cruza con otro horario activo");
+            throw new ConflictException(
+                "El horario se cruza con otro horario activo del odontólogo dentro de la misma vigencia"
+            );
         }
 
         HorarioOdontologo horario = new HorarioOdontologo();
@@ -55,6 +64,8 @@ public class HorarioOdontologoService {
         horario.setDiaSemana(request.diaSemana());
         horario.setHoraInicio(request.horaInicio());
         horario.setHoraFin(request.horaFin());
+        horario.setFechaInicioVigencia(request.fechaInicioVigencia());
+        horario.setFechaFinVigencia(request.fechaFinVigencia());
         horario.setActivo(true);
 
         return mapear(horarioRepository.save(horario));
@@ -66,8 +77,10 @@ public class HorarioOdontologoService {
             .orElseThrow(() -> new ResourceNotFoundException("Horario no encontrado"));
 
         validarHoras(request.horaInicio(), request.horaFin());
+        validarVigencia(request.fechaInicioVigencia(), request.fechaFinVigencia());
 
-        OdontologoEspecialidad oe = odontologoEspecialidadRepository.findByIdAndActivoTrue(request.odontologoEspecialidadId())
+        OdontologoEspecialidad oe = odontologoEspecialidadRepository
+            .findByIdAndActivoTrue(request.odontologoEspecialidadId())
             .orElseThrow(() -> new ResourceNotFoundException("Odontólogo/especialidad no encontrado"));
 
         Sede sede = sedeRepository.findByIdAndActivoTrue(request.sedeId())
@@ -78,11 +91,15 @@ public class HorarioOdontologoService {
             oe.getOdontologo().getId(),
             request.diaSemana(),
             request.horaInicio(),
-            request.horaFin()
+            request.horaFin(),
+            request.fechaInicioVigencia(),
+            fechaFinComparacion(request.fechaFinVigencia())
         );
 
         if (cruce) {
-            throw new ConflictException("El horario se cruza con otro horario activo");
+            throw new ConflictException(
+                "El horario se cruza con otro horario activo del odontólogo dentro de la misma vigencia"
+            );
         }
 
         horario.setOdontologoEspecialidad(oe);
@@ -90,6 +107,8 @@ public class HorarioOdontologoService {
         horario.setDiaSemana(request.diaSemana());
         horario.setHoraInicio(request.horaInicio());
         horario.setHoraFin(request.horaFin());
+        horario.setFechaInicioVigencia(request.fechaInicioVigencia());
+        horario.setFechaFinVigencia(request.fechaFinVigencia());
         horario.setActivo(true);
 
         return mapear(horarioRepository.save(horario));
@@ -138,10 +157,20 @@ public class HorarioOdontologoService {
         return horarios.stream().map(this::mapear).toList();
     }
 
-    private void validarHoras(java.time.LocalTime inicio, java.time.LocalTime fin) {
+    private void validarHoras(LocalTime inicio, LocalTime fin) {
         if (!fin.isAfter(inicio)) {
             throw new ConflictException("La hora fin debe ser posterior a la hora inicio");
         }
+    }
+
+    private void validarVigencia(LocalDate inicio, LocalDate fin) {
+        if (fin != null && fin.isBefore(inicio)) {
+            throw new ConflictException("La fecha fin de vigencia no puede ser anterior a la fecha inicio");
+        }
+    }
+
+    private LocalDate fechaFinComparacion(LocalDate fechaFinVigencia) {
+        return fechaFinVigencia != null ? fechaFinVigencia : FECHA_MAXIMA;
     }
 
     private HorarioOdontologoResponse mapear(HorarioOdontologo horario) {
@@ -152,6 +181,8 @@ public class HorarioOdontologoService {
             horario.getDiaSemana(),
             horario.getHoraInicio(),
             horario.getHoraFin(),
+            horario.getFechaInicioVigencia(),
+            horario.getFechaFinVigencia(),
             horario.getActivo()
         );
     }

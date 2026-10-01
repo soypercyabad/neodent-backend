@@ -16,19 +16,97 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CitaRepository
-    extends JpaRepository<Cita, Long> {
+    extends JpaRepository<Cita, Long>, CitaRepositoryCustom {
+
+    @Query("""
+        SELECT COUNT(c) > 0
+        FROM Cita c
+        WHERE c.estado.nombre IN (
+            'PROGRAMADA',
+            'CONFIRMADA',
+            'EN_ATENCION'
+        )
+        AND c.fechaHoraInicio < :fin
+        AND c.fechaHoraFin > :inicio
+    """)
+    boolean existeCitaActivaGlobalEnHorario(
+        @Param("inicio")
+        LocalDateTime inicio,
+
+        @Param("fin")
+        LocalDateTime fin
+    );
+
+    @Query("""
+        SELECT COUNT(c) > 0
+        FROM Cita c
+        WHERE c.estado.nombre IN (
+            'PROGRAMADA',
+            'CONFIRMADA',
+            'EN_ATENCION'
+        )
+        AND c.sede.id = :sedeId
+        AND c.fechaHoraInicio < :fin
+        AND c.fechaHoraFin > :inicio
+    """)
+    boolean existeCitaActivaGlobalEnHorarioYSede(
+        @Param("sedeId")
+        Integer sedeId,
+
+        @Param("inicio")
+        LocalDateTime inicio,
+
+        @Param("fin")
+        LocalDateTime fin
+    );
 
     @Query("""
         SELECT COUNT(c) > 0
         FROM Cita c
         WHERE c.odontologoEspecialidad.odontologo.id = :odontologoId
-        AND c.estado.nombre NOT IN ('CANCELADA', 'NO_ASISTIO')
+        AND c.estado.nombre IN (
+            'PROGRAMADA',
+            'CONFIRMADA',
+            'EN_ATENCION'
+        )
         AND c.fechaHoraInicio < :fin
         AND c.fechaHoraFin > :inicio
     """)
     boolean existeCitaActivaEnHorario(
+        @Param("odontologoId")
         Long odontologoId,
+
+        @Param("inicio")
         LocalDateTime inicio,
+
+        @Param("fin")
+        LocalDateTime fin
+    );
+
+    @Query("""
+        SELECT COUNT(c) > 0
+        FROM Cita c
+        WHERE c.odontologoEspecialidad.odontologo.id = :odontologoId
+        AND c.estado.nombre IN (
+            'PROGRAMADA',
+            'CONFIRMADA',
+            'EN_ATENCION'
+        )
+        AND c.sede.id = :sedeId
+        AND c.fechaHoraInicio < :fin
+        AND c.fechaHoraFin > :inicio
+    """)
+    boolean existeCitaActivaEnHorarioYSede(
+        @Param("odontologoId")
+        Long odontologoId,
+
+        @Param("sedeId")
+        Integer sedeId,
+
+        @Param("inicio")
+        LocalDateTime inicio,
+
+        @Param("fin")
         LocalDateTime fin
     );
 
@@ -131,27 +209,13 @@ public interface CitaRepository
         Pageable pageable
     );
 
-    @Query("""
-        SELECT c
-        FROM Cita c
-        JOIN FETCH c.estado
-        JOIN FETCH c.paciente
-        JOIN FETCH c.odontologoEspecialidad oe
-        JOIN FETCH oe.odontologo o
-        JOIN FETCH oe.especialidad
-        JOIN FETCH c.sede
-        WHERE (:odontologoId IS NULL OR oe.odontologo.id = :odontologoId)
-        AND (:estado IS NULL OR c.estado.nombre = :estado)
-        AND (:sedeId IS NULL OR c.sede.id = :sedeId)
-        AND (:inicioDia IS NULL OR c.fechaHoraInicio >= :inicioDia)
-        AND (:finDia IS NULL OR c.fechaHoraInicio < :finDia)
-        ORDER BY c.fechaHoraInicio DESC
-    """)
-    List<Cita> buscarAgenda(
-        @Param("odontologoId") Long odontologoId,
-        @Param("estado") String estado,
-        @Param("sedeId") Integer sedeId,
-        @Param("inicioDia") LocalDateTime inicioDia,
-        @Param("finDia") LocalDateTime finDia
-    );
+    default List<Cita> buscarAgenda(
+        Long odontologoId,
+        String estado,
+        Integer sedeId,
+        LocalDateTime inicioDia,
+        LocalDateTime finDia
+    ) {
+        return buscarAgendaDinamica(odontologoId, estado, sedeId, inicioDia, finDia);
+    }
 }

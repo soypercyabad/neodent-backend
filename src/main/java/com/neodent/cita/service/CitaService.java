@@ -311,6 +311,7 @@ public class CitaService {
             cita.getOdontologoEspecialidad().getId(),
             cita.getSede().getId(),
             diaSemana,
+            nuevoInicio.toLocalDate(),
             nuevoInicio.toLocalTime(),
             nuevoFin.toLocalTime()
         );

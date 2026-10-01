@@ -216,6 +216,45 @@ public class SecurityConfig {
                     AppConstants.Roles.RECEPCIONISTA
                 )
 
+                /* Catálogo activo de tipos de bloqueo */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/tipos-bloqueo"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+
+                /* Administración de tipos de bloqueo */
+                .requestMatchers(
+                    "/api/tipos-bloqueo/admin",
+                    "/api/tipos-bloqueo/admin/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/tipos-bloqueo"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/tipos-bloqueo/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
+                .requestMatchers(
+                    HttpMethod.PATCH,
+                    "/api/tipos-bloqueo/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
                 /* Horarios y bloqueos */
                 .requestMatchers(
                     HttpMethod.GET,

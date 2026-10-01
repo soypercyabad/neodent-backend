@@ -1,5 +1,6 @@
 package com.neodent.cita.dto.response;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record HorarioOdontologoResponse(
@@ -9,5 +10,7 @@ public record HorarioOdontologoResponse(
     Byte diaSemana,
     LocalTime horaInicio,
     LocalTime horaFin,
+    LocalDate fechaInicioVigencia,
+    LocalDate fechaFinVigencia,
     Boolean activo
 ) {}

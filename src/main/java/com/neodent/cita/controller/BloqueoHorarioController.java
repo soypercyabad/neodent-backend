@@ -37,13 +37,17 @@ public class BloqueoHorarioController {
     })
     @GetMapping
     public List<BloqueoHorarioResponse> listar(
-        @RequestParam(required = false) Long odontologoId,
-        @RequestParam(required = false) Integer sedeId
+        @RequestParam(required = false)
+        Long odontologoId,
+
+        @RequestParam(required = false)
+        Integer sedeId
     ) {
         return bloqueoService.listar(odontologoId, sedeId);
     }
 
 
+    
     @Operation(
         summary = "Crear bloqueo de agenda",
         description = "Crea un bloqueo de agenda odontológica"
@@ -60,6 +64,26 @@ public class BloqueoHorarioController {
     ) {
         Long usuarioId = Long.valueOf(jwt.getSubject());
         return bloqueoService.crear(request, usuarioId);
+    }
+
+    @Operation(
+        summary = "Actualizar bloqueo de agenda",
+        description = "Actualiza un bloqueo de agenda existente"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Bloqueo actualizado correctamente"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos o cruce de horarios"),
+        @ApiResponse(responseCode = "401", description = "No autorizado"),
+        @ApiResponse(responseCode = "404", description = "Bloqueo, odontólogo o sede no encontrado")
+    })
+    @PutMapping("/{id}")
+    public BloqueoHorarioResponse actualizar(
+        @PathVariable Long id,
+        @Valid @RequestBody CrearBloqueoHorarioRequest request,
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        Long usuarioId = Long.valueOf(jwt.getSubject());
+        return bloqueoService.actualizar(id, request, usuarioId);
     }
 
 

@@ -21,7 +21,11 @@ public class BloqueoHorario {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_odontologo", nullable = false)
+    @JoinColumn(name = "id_tipo_bloqueo", nullable = false)
+    private TipoBloqueoHorario tipoBloqueo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_odontologo")
     private Odontologo odontologo;
 
     @ManyToOne(fetch = FetchType.LAZY)

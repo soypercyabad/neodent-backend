@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record CrearHorarioOdontologoRequest(
@@ -11,5 +12,7 @@ public record CrearHorarioOdontologoRequest(
     @NotNull Integer sedeId,
     @NotNull @Min(1) @Max(7) Byte diaSemana,
     @NotNull LocalTime horaInicio,
-    @NotNull LocalTime horaFin
+    @NotNull LocalTime horaFin,
+    @NotNull LocalDate fechaInicioVigencia,
+    LocalDate fechaFinVigencia
 ) {}

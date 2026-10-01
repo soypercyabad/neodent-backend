@@ -77,7 +77,12 @@ public class DisponibilidadCitaService {
         byte diaSemana = (byte) fecha.getDayOfWeek().getValue();
 
         List<HorarioOdontologo> horarios = horarioRepository
-            .findByOdontologoEspecialidadIdAndSedeIdAndDiaSemanaAndActivoTrueOrderByHoraInicio(odontologoEspecialidadId, sedeId, diaSemana);
+            .buscarHorariosVigentesParaFecha(
+                odontologoEspecialidadId,
+                sedeId,
+                diaSemana,
+                fecha
+            );
 
         Long odontologoId = oe.getOdontologo().getId();
         LocalDateTime inicioDia = fecha.atStartOfDay();

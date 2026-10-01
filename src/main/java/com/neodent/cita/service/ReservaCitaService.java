@@ -116,7 +116,12 @@ public class ReservaCitaService {
         byte diaSemana = (byte) inicio.getDayOfWeek().getValue();
 
         boolean dentroHorario = horarioRepository.existeHorarioDisponible(
-            oe.getId(), sede.getId(), diaSemana, inicio.toLocalTime(), fin.toLocalTime()
+            oe.getId(),
+            sede.getId(),
+            diaSemana,
+            inicio.toLocalDate(),
+            inicio.toLocalTime(),
+            fin.toLocalTime()
         );
 
         if (!dentroHorario) {
