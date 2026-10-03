@@ -4,6 +4,9 @@ import com.neodent.auth.dto.request.CompleteAccountActivationRequest;
 import com.neodent.auth.dto.request.ForgotPasswordRequest;
 import com.neodent.auth.dto.request.LoginRequest;
 import com.neodent.auth.dto.request.PatientRegistrationCheckRequest;
+import com.neodent.auth.dto.request.PatientRegistrationConfirmRequest;
+import com.neodent.auth.dto.request.PatientRegistrationInitRequest;
+import com.neodent.auth.dto.response.PatientRegistrationInitResponse;
 import com.neodent.auth.dto.request.PatientRegistrationRequest;
 import com.neodent.auth.dto.request.ResendCodeRequest;
 import com.neodent.auth.dto.request.ResetPasswordRequest;
@@ -160,21 +163,54 @@ public class AuthController {
     }
 
 
-
+    
     @Operation(
-        summary = "Registrar paciente",
+        summary = "Iniciar registro de paciente (solicitar código)",
         description = """
-            Registra un nuevo paciente y crea su cuenta de acceso en estado pendiente.
-            Envía un código para verificar el correo.
+            Valida disponibilidad de documento y correo electrónico.
+            Genera y envía un código OTP al correo sin crear aún la cuenta en base de datos.
             """
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Registro creado"),
+        @ApiResponse(responseCode = "200", description = "Código de verificación enviado"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos"),
         @ApiResponse(responseCode = "403", description = "Verificación Turnstile inválida"),
-        @ApiResponse(responseCode = "409", description = "Paciente, correo o teléfono ya registrado"),
+        @ApiResponse(responseCode = "409", description = "Documento o correo ya registrado"),
         @ApiResponse(responseCode = "429", description = "Demasiadas solicitudes")
     })
+    @PostMapping("/patient-registration/init")
+    public PatientRegistrationInitResponse iniciarRegistroPaciente(
+        @Valid @RequestBody PatientRegistrationInitRequest request,
+        HttpServletRequest httpRequest
+    ) {
+        String ip = obtenerIpCliente(httpRequest);
+        return patientRegistrationService.iniciarRegistro(request, ip);
+    }
+
+
+
+    @Operation(
+        summary = "Confirmar registro de paciente con código",
+        description = """
+            Verifica el código OTP enviado al correo.
+            Si es correcto, persiste el usuario y el paciente directamente como ACTIVO en base de datos.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Paciente registrado y verificado"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "Código inválido o expirado"),
+        @ApiResponse(responseCode = "409", description = "Documento o correo ya registrado")
+    })
+    @PostMapping("/patient-registration/confirm")
+    public PatientRegistrationResponse confirmarRegistroPaciente(
+        @Valid @RequestBody PatientRegistrationConfirmRequest request
+    ) {
+        return patientRegistrationService.confirmarRegistro(request);
+    }
+
+
+
     @PostMapping("/patient-registration")
     public PatientRegistrationResponse registrarPaciente(
         @Valid @RequestBody PatientRegistrationRequest request,

@@ -1,12 +1,16 @@
 package com.neodent.auth.service;
 
+import com.neodent.auth.dto.request.PatientRegistrationConfirmRequest;
+import com.neodent.auth.dto.request.PatientRegistrationInitRequest;
 import com.neodent.auth.dto.request.PatientRegistrationRequest;
 import com.neodent.auth.dto.request.RestartEmailVerificationRequest;
 import com.neodent.auth.dto.request.VerifyEmailRequest;
 import com.neodent.auth.dto.response.PatientRegistrationCheckResponse;
+import com.neodent.auth.dto.response.PatientRegistrationInitResponse;
 import com.neodent.auth.dto.response.PatientRegistrationResponse;
 import com.neodent.auth.dto.response.RestartEmailVerificationResponse;
 import com.neodent.auth.dto.response.VerifyEmailResponse;
+import com.neodent.auth.model.CodigoVerificacion;
 import com.neodent.dni.DniService;
 import com.neodent.dni.dto.DniResponse;
 import com.neodent.paciente.dto.CrearPacienteRequest;
@@ -74,6 +78,81 @@ public class PatientRegistrationService {
     /* Compatibilidad temporal con /check-dni mientras migras el frontend. */
     public PatientRegistrationCheckResponse verificarDni(String dni, String turnstileToken, String ip) {
         return verificarDocumento("DNI", dni, turnstileToken, ip);
+    }
+
+    public PatientRegistrationInitResponse iniciarRegistro(PatientRegistrationInitRequest request, String ip) {
+        rateLimitService.validar(ip);
+        turnstileService.validar(request.turnstileToken(), ip);
+
+        TipoDocumento tipo = buscarTipoDocumento(request.tipoDocumento());
+        String documento = normalizarYValidarDocumento(tipo, request.numeroDocumento());
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+
+        if (usuarioRepository.existsByCorreoIgnoreCase(email))
+            throw new ConflictException("Ya existe una cuenta registrada con este correo");
+
+        if (pacienteRepository.existsByTipoDocumentoCodigoAndNumeroDocumento(tipo.getCodigo(), documento))
+            throw new ConflictException("Ya existe un paciente registrado con este documento");
+
+        OtpService.OtpGenerado otp = otpService.generarRegistroEmailVerification(email);
+
+        return new PatientRegistrationInitResponse(
+            otp.id(),
+            "Código de verificación enviado al correo electrónico"
+        );
+    }
+
+    @Transactional
+    public PatientRegistrationResponse confirmarRegistro(PatientRegistrationConfirmRequest request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+
+        CodigoVerificacion codigoEntity = otpService.verificarRegistroEmailOtp(request.challengeId(), request.codigo());
+
+        if (!email.equalsIgnoreCase(codigoEntity.getCorreoDestino())) {
+            throw new BusinessException("El código no corresponde a este correo electrónico");
+        }
+
+        TipoDocumento tipo = buscarTipoDocumento(request.tipoDocumento());
+        String documento = normalizarYValidarDocumento(tipo, request.numeroDocumento());
+
+        if (usuarioRepository.existsByCorreoIgnoreCase(email))
+            throw new ConflictException("Ya existe una cuenta registrada con este correo");
+
+        if (pacienteRepository.existsByTipoDocumentoCodigoAndNumeroDocumento(tipo.getCodigo(), documento))
+            throw new ConflictException("Ya existe un paciente registrado con este documento");
+
+        Rol rolPaciente = rolRepository.findByNombreAndActivoTrue(AppConstants.Roles.PACIENTE)
+            .orElseThrow(() -> new IllegalStateException("Rol PACIENTE no configurado"));
+        EstadoUsuario activo = estadoUsuarioRepository.findByNombreAndActivoTrue(AppConstants.EstadosUsuario.ACTIVO)
+            .orElseThrow(() -> new IllegalStateException("Estado ACTIVO no configurado"));
+
+        Usuario usuario = new Usuario();
+        usuario.setAliasInterno(null);
+        usuario.setCorreo(email);
+        usuario.setHashContrasena(passwordEncoder.encode(request.password()));
+        usuario.getRoles().add(rolPaciente);
+        usuario.setEstado(activo);
+        usuario.setSegundoFactor(true);
+        usuario.setCorreoVerificado(true);
+
+        Usuario usuarioGuardado = usuarioRepository.save(usuario);
+
+        codigoEntity.setUsuario(usuarioGuardado);
+
+        CrearPacienteRequest pacienteRequest = new CrearPacienteRequest(
+            tipo.getCodigo(), documento, request.nombres(), request.apellidoPaterno(),
+            request.apellidoMaterno(), request.fechaNacimiento(), request.telefono(),
+            email, request.direccion()
+        );
+
+        Paciente paciente = pacienteService.crearConUsuario(pacienteRequest, usuarioGuardado);
+
+        return new PatientRegistrationResponse(
+            paciente.getId(),
+            usuarioGuardado.getId(),
+            codigoEntity.getId(),
+            "Cuenta registrada y verificada con éxito"
+        );
     }
 
     @Transactional

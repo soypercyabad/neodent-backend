@@ -110,7 +110,66 @@ public class OtpService {
         CodigoVerificacion guardado = repository.save(otp);
         emailService.enviarVerificacionEmail(usuario.getCorreo(), codigo);
 
+                return new OtpGenerado(guardado.getId(), codigo);
+    }
+
+    @Transactional
+    public OtpGenerado generarRegistroEmailVerification(String correo) {
+        String codigo = String.format("%06d", random.nextInt(1_000_000));
+
+        CodigoVerificacion otp = new CodigoVerificacion();
+        otp.setUsuario(null);
+        otp.setPaciente(null);
+        otp.setCorreoDestino(correo);
+        otp.setTipo(TIPO_EMAIL);
+        otp.setHashCodigo(passwordEncoder.encode(codigo));
+        otp.setFechaExpiracion(LocalDateTime.now(clock).plusMinutes(EXPIRACION_MINUTOS));
+        otp.setIntentos((short) 0);
+        otp.setMaxIntentos((short) 5);
+        otp.setUsado(false);
+
+        CodigoVerificacion guardado = repository.save(otp);
+        emailService.enviarVerificacionEmail(correo, codigo);
+
         return new OtpGenerado(guardado.getId(), codigo);
+    }
+
+    @Transactional(noRollbackFor = UnauthorizedException.class)
+    public CodigoVerificacion verificarRegistroEmailOtp(Long challengeId, String codigo) {
+        CodigoVerificacion otp = repository.findByIdAndTipo(challengeId, TIPO_EMAIL)
+            .orElseThrow(() -> new UnauthorizedException("Código de verificación inválido"));
+
+        if (otp.getIntentos() >= otp.getMaxIntentos()) {
+            throw new UnauthorizedException("Se superó el número máximo de intentos");
+        }
+        if (otp.getUsado()) {
+            throw new UnauthorizedException("El código ya fue utilizado");
+        }
+        if (LocalDateTime.now(clock).isAfter(otp.getFechaExpiracion())) {
+            throw new UnauthorizedException("El código ha expirado");
+        }
+
+        boolean valido = passwordEncoder.matches(codigo, otp.getHashCodigo());
+        if (!valido) {
+            short intentos = (short) (otp.getIntentos() + 1);
+            otp.setIntentos(intentos);
+
+            if (intentos >= otp.getMaxIntentos()) {
+                otp.setUsado(true);
+            }
+            repository.saveAndFlush(otp);
+
+            throw new UnauthorizedException(
+                intentos >= otp.getMaxIntentos()
+                    ? "Se superó el número máximo de intentos"
+                    : "Código de verificación incorrecto"
+            );
+        }
+
+        otp.setUsado(true);
+        repository.saveAndFlush(otp);
+
+        return otp;
     }
 
     @Transactional(noRollbackFor = UnauthorizedException.class)
@@ -177,7 +236,7 @@ public class OtpService {
 
         OtpGenerado nuevo = switch (anterior.getTipo()) {
             case TIPO_LOGIN -> generarLoginOtp(anterior.getUsuario());
-            case TIPO_EMAIL -> generarEmailVerification(anterior.getUsuario());
+            case TIPO_EMAIL -> anterior.getUsuario() != null ? generarEmailVerification(anterior.getUsuario()) : generarRegistroEmailVerification(anterior.getCorreoDestino());
             case TIPO_ACTIVACION -> generarAccountActivationOtp(anterior.getPaciente());
             case TIPO_STAFF_ACTIVATION -> generarStaffActivationOtp(anterior.getUsuario());
             default -> throw new UnauthorizedException("Tipo de verificación no permitido");
