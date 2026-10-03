@@ -15,13 +15,13 @@ public interface PacienteRepository
         extends JpaRepository<Paciente, Long> {
 
     @Override
-    @EntityGraph(attributePaths = "tipoDocumento")
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
     Optional<Paciente> findById(Long id);
 
-    @EntityGraph(attributePaths = "tipoDocumento")
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
     Optional<Paciente> findByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
 
-    @EntityGraph(attributePaths = {"tipoDocumento","usuario"})
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
     Optional<Paciente> findByUsuarioIdAndActivoTrue(Long usuarioId);
 
     boolean existsByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
@@ -34,7 +34,7 @@ public interface PacienteRepository
 
     boolean existsByTelefonoAndIdNot(String telefono, Long id);
 
-    @EntityGraph(attributePaths = {"tipoDocumento", "usuario"})
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
     @Query("""
         SELECT p
         FROM Paciente p

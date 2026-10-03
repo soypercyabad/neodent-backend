@@ -17,6 +17,8 @@ public record PacienteResponse(
     Boolean activo,
     Long usuarioId,
     boolean tieneCuenta,
+    String estadoCuenta,
+    Boolean correoVerificado,
     LocalDateTime fechaCreacion,
     LocalDateTime fechaActualizacion
 ) {}
