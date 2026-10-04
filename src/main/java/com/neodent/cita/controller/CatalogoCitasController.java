@@ -1,5 +1,6 @@
 package com.neodent.cita.controller;
 
+import com.neodent.cita.repository.HorarioOdontologoRepository;
 import com.neodent.especialidad.repository.OdontologoEspecialidadRepository;
 import com.neodent.sede.repository.SedeRepository;
 import com.neodent.servicio.model.ServicioSede;
@@ -31,6 +32,7 @@ public class CatalogoCitasController {
     private final SedeRepository sedeRepository;
     private final OdontologoEspecialidadRepository odontologoEspecialidadRepository;
     private final ServicioSedeRepository servicioSedeRepository;
+    private final HorarioOdontologoRepository horarioOdontologoRepository;
 
     public record ServicioItem(
         Integer id,
@@ -71,7 +73,7 @@ public class CatalogoCitasController {
     })
     @GetMapping("/servicios")
     @Transactional(readOnly = true)
-    public List<ServicioItem> servicios() {
+    public List<ServicioItem> servicios(@RequestParam(required = false) Integer sedeId) {
         var servicios = servicioRepository.findAll().stream()
             .filter(s -> Boolean.TRUE.equals(s.getActivo()))
             .filter(s -> Boolean.TRUE.equals(s.getEspecialidad().getActivo()))
@@ -80,6 +82,13 @@ public class CatalogoCitasController {
         Set<Integer> sedesActivas = sedeRepository.findAll().stream()
             .filter(s -> Boolean.TRUE.equals(s.getActivo()))
             .map(s -> s.getId())
+            .collect(Collectors.toSet());
+
+        // Pares (especialidadId, sedeId) que tienen doctores con horarios activos y vigentes
+        Set<String> especialidadSedeConHorario = horarioOdontologoRepository
+            .listarEspecialidadesYSedesConHorariosActivos()
+            .stream()
+            .map(row -> row[0].toString() + "_" + row[1].toString())
             .collect(Collectors.toSet());
 
         Map<Integer, List<Integer>> asociaciones = servicioSedeRepository
@@ -94,18 +103,27 @@ public class CatalogoCitasController {
             ));
 
         return servicios.stream()
-            .filter(s -> !asociaciones.getOrDefault(s.getId(), List.of()).isEmpty())
-            .sorted(Comparator.comparing(s -> s.getNombre().toLowerCase()))
-            .map(s -> new ServicioItem(
-                s.getId(),
-                s.getNombre(),
-                s.getDescripcion(),
-                s.getEspecialidad().getId(),
-                s.getDuracionMinutos().intValue(),
-                s.getPrecioReferencial(),
-                Boolean.TRUE.equals(s.getDestacado()),
-                asociaciones.getOrDefault(s.getId(), List.of())
-            ))
+            .map(s -> {
+                Integer espId = s.getEspecialidad().getId();
+                List<Integer> sedesValidas = asociaciones.getOrDefault(s.getId(), List.of())
+                    .stream()
+                    .filter(sid -> especialidadSedeConHorario.contains(espId + "_" + sid))
+                    .filter(sid -> sedeId == null || sid.equals(sedeId))
+                    .toList();
+
+                return new ServicioItem(
+                    s.getId(),
+                    s.getNombre(),
+                    s.getDescripcion(),
+                    espId,
+                    s.getDuracionMinutos().intValue(),
+                    s.getPrecioReferencial(),
+                    Boolean.TRUE.equals(s.getDestacado()),
+                    sedesValidas
+                );
+            })
+            .filter(s -> !s.sedeIds().isEmpty())
+            .sorted(Comparator.comparing(s -> s.nombre().toLowerCase()))
             .toList();
     }
 
@@ -145,13 +163,23 @@ public class CatalogoCitasController {
     @Transactional(readOnly = true)
     public List<EspecialistaItem> especialistas(
         @Parameter(description = "ID de la especialidad", example = "1")
-        @RequestParam Integer especialidadId
+        @RequestParam Integer especialidadId,
+        @Parameter(description = "ID de la sede (opcional)", example = "1")
+        @RequestParam(required = false) Integer sedeId
     ) {
-        return odontologoEspecialidadRepository.findAll().stream()
+        Set<Long> idsValidos = new java.util.HashSet<>(
+            horarioOdontologoRepository.listarOdontologoEspecialidadIdsConHorario(especialidadId, sedeId)
+        );
+
+        if (idsValidos.isEmpty()) {
+            return List.of();
+        }
+
+        return odontologoEspecialidadRepository.findAllById(idsValidos).stream()
             .filter(oe -> Boolean.TRUE.equals(oe.getActivo()))
             .filter(oe -> Boolean.TRUE.equals(oe.getOdontologo().getActivo()))
             .filter(oe -> Boolean.TRUE.equals(oe.getOdontologo().getPersonal().getActivo()))
-            .filter(oe -> oe.getEspecialidad().getId().equals(especialidadId))
+            .sorted(Comparator.comparing(oe -> oe.getOdontologo().getPersonal().getNombres()))
             .map(oe -> new EspecialistaItem(
                 oe.getId(),
                 oe.getOdontologo().getId(),

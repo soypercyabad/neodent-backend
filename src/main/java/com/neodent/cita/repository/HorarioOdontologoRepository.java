@@ -52,6 +52,37 @@ public interface HorarioOdontologoRepository
         @Param("fecha") LocalDate fecha
     );
 
+    @Query("""
+        SELECT DISTINCT h.odontologoEspecialidad.especialidad.id, h.sede.id
+        FROM HorarioOdontologo h
+        WHERE h.activo = true
+          AND h.sede.activo = true
+          AND h.odontologoEspecialidad.activo = true
+          AND h.odontologoEspecialidad.especialidad.activo = true
+          AND h.odontologoEspecialidad.odontologo.activo = true
+          AND h.odontologoEspecialidad.odontologo.personal.activo = true
+          AND (h.fechaFinVigencia IS NULL OR h.fechaFinVigencia >= CURRENT_DATE)
+    """)
+    List<Object[]> listarEspecialidadesYSedesConHorariosActivos();
+
+    @Query("""
+        SELECT DISTINCT h.odontologoEspecialidad.id
+        FROM HorarioOdontologo h
+        WHERE h.activo = true
+          AND h.sede.activo = true
+          AND (:sedeId IS NULL OR h.sede.id = :sedeId)
+          AND h.odontologoEspecialidad.especialidad.id = :especialidadId
+          AND h.odontologoEspecialidad.activo = true
+          AND h.odontologoEspecialidad.especialidad.activo = true
+          AND h.odontologoEspecialidad.odontologo.activo = true
+          AND h.odontologoEspecialidad.odontologo.personal.activo = true
+          AND (h.fechaFinVigencia IS NULL OR h.fechaFinVigencia >= CURRENT_DATE)
+    """)
+    List<Long> listarOdontologoEspecialidadIdsConHorario(
+        @Param("especialidadId") Integer especialidadId,
+        @Param("sedeId") Integer sedeId
+    );
+
     List<HorarioOdontologo> findByActivoTrueOrderByDiaSemanaAscHoraInicioAsc();
 
     List<HorarioOdontologo> findByOdontologoEspecialidadIdAndActivoTrueOrderByDiaSemanaAscHoraInicioAsc(
