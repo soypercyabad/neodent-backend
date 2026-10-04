@@ -11,6 +11,7 @@ public record UsuarioInternoResponse(
 
     Long personalId,
     Integer tipoDocumentoId,
+    String tipoDocumentoCodigo,
     String numeroDocumento,
     String nombres,
     String apellidoPaterno,

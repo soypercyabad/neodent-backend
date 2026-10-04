@@ -327,6 +327,7 @@ public class UsuarioInternoService {
 
                 personal.getId(),
                 personal.getTipoDocumento().getId(),
+                personal.getTipoDocumento().getCodigo(),
                 personal.getNumeroDocumento(),
                 personal.getNombres(),
                 personal.getApellidoPaterno(),
@@ -641,6 +642,7 @@ public class UsuarioInternoService {
 
             personal.getId(),
             personal.getTipoDocumento().getId(),
+            personal.getTipoDocumento().getCodigo(),
             personal.getNumeroDocumento(),
             personal.getNombres(),
             personal.getApellidoPaterno(),
