@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -96,6 +97,9 @@ public class BrevoEmailService implements EmailService {
         return templateEngine.process("email/" + template, context);
     }
 
+    private static final int MAX_INTENTOS = 3;
+    private static final long ESPERA_REINTENTO_MS = 1000L;
+
     private void enviar(String destinatario, String asunto, String html) {
         Map<String, Object> body = Map.of(
             "sender", Map.of("name", senderName, "email", senderEmail),
@@ -104,17 +108,36 @@ public class BrevoEmailService implements EmailService {
             "htmlContent", html
         );
 
-        try {
-            restClient
-                .post()
-                .uri(apiUrl + "/v3/smtp/email")
-                .header("api-key", apiKey)
-                .body(body)
-                .retrieve()
-                .toBodilessEntity();
-            log.info("Correo enviado exitosamente a {} con asunto '{}'", destinatario, asunto);
-        } catch (Exception ex) {
-            log.error("Error al enviar correo a {} con asunto '{}': {}", destinatario, asunto, ex.getMessage());
+        for (int intento = 1; intento <= MAX_INTENTOS; intento++) {
+            try {
+                restClient
+                    .post()
+                    .uri(apiUrl + "/v3/smtp/email")
+                    .header("api-key", apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .toBodilessEntity();
+
+                log.info("Correo enviado exitosamente a {} con asunto '{}' (intento {})", destinatario, asunto, intento);
+                return;
+            } catch (Exception ex) {
+                if (intento < MAX_INTENTOS) {
+                    log.warn("Intento {}/{} falló al enviar correo a {} con asunto '{}' ({}: {}). Reintentando en {}ms...",
+                        intento, MAX_INTENTOS, destinatario, asunto, ex.getClass().getSimpleName(), ex.getMessage(), ESPERA_REINTENTO_MS);
+                    try {
+                        Thread.sleep(ESPERA_REINTENTO_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.error("Interrupción durante la espera de reintento de envío de correo", ie);
+                        return;
+                    }
+                } else {
+                    log.error("Error definitivo al enviar correo a {} con asunto '{}' tras {} intentos: {}",
+                        destinatario, asunto, MAX_INTENTOS, ex.getMessage(), ex);
+                }
+            }
         }
     }
 
