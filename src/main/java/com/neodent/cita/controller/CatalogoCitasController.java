@@ -39,6 +39,7 @@ public class CatalogoCitasController {
         Integer especialidadId,
         Integer duracionMinutos,
         BigDecimal precioReferencial,
+        boolean destacado,
         List<Integer> sedeIds
     ) {}
 
@@ -102,6 +103,7 @@ public class CatalogoCitasController {
                 s.getEspecialidad().getId(),
                 s.getDuracionMinutos().intValue(),
                 s.getPrecioReferencial(),
+                Boolean.TRUE.equals(s.getDestacado()),
                 asociaciones.getOrDefault(s.getId(), List.of())
             ))
             .toList();

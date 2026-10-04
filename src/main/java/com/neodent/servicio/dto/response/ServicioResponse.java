@@ -12,5 +12,6 @@ public record ServicioResponse(
     Integer duracionMinutos,
     BigDecimal precioReferencial,
     Boolean activo,
+    Boolean destacado,
     List<Integer> sedeIds
 ) {}

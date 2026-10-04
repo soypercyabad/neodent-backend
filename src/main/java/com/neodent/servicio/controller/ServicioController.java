@@ -92,6 +92,21 @@ public class ServicioController {
 
 
     @Operation(
+        summary = "Alternar destacado de servicio",
+        description = "Marca o desmarca un servicio como destacado"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Estado destacado actualizado exitosamente"),
+        @ApiResponse(responseCode = "404", description = "Servicio no encontrado")
+    })
+    @PatchMapping("/{id}/destacado")
+    public ServicioResponse alternarDestacado(@PathVariable Integer id) {
+        return service.alternarDestacado(id);
+    }
+
+
+
+    @Operation(
         summary = "Cambiar estado de servicio",
         description = "Activa o desactiva un servicio odontológico"
     )

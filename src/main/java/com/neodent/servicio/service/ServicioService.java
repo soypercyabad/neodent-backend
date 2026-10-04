@@ -95,6 +95,13 @@ public class ServicioService {
         return mapear(repository.saveAndFlush(servicio));
     }
 
+    @Transactional
+    public ServicioResponse alternarDestacado(Integer id) {
+        Servicio servicio = buscar(id);
+        servicio.setDestacado(!Boolean.TRUE.equals(servicio.getDestacado()));
+        return mapear(repository.saveAndFlush(servicio));
+    }
+
     private Servicio buscar(Integer id) {
         return repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
@@ -140,6 +147,9 @@ public class ServicioService {
 
         servicio.setDuracionMinutos(request.duracionMinutos().shortValue());
         servicio.setPrecioReferencial(request.precioReferencial());
+        if (request.destacado() != null) {
+            servicio.setDestacado(request.destacado());
+        }
     }
 
     private void actualizarSedes(Integer servicioId, List<Integer> sedeIds) {
@@ -188,6 +198,7 @@ public class ServicioService {
             servicio.getDuracionMinutos().intValue(),
             servicio.getPrecioReferencial(),
             servicio.getActivo(),
+            Boolean.TRUE.equals(servicio.getDestacado()),
             sedeIds
         );
     }

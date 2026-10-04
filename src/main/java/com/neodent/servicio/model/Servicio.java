@@ -48,4 +48,7 @@ public class Servicio {
 
     @Column(nullable = false)
     private Boolean activo = true;
+
+    @Column(nullable = false)
+    private Boolean destacado = false;
 }
