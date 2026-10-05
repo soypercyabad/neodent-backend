@@ -2,7 +2,7 @@ package com.neodent.auth.service;
 
 import com.neodent.auth.model.TokenAccion;
 import com.neodent.auth.repository.TokenAccionRepository;
-import com.neodent.notification.EmailService;
+import com.neodent.notification.service.EmailService;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.BusinessException;
 import com.neodent.shared.exception.UnauthorizedException;

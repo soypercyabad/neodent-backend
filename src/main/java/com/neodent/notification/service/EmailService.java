@@ -1,4 +1,4 @@
-package com.neodent.notification;
+package com.neodent.notification.service;
 
 import com.neodent.notification.dto.BienvenidaPersonalEmailData;
 import com.neodent.notification.dto.CitaCanceladaEmailData;

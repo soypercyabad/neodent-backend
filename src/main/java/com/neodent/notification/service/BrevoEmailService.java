@@ -1,5 +1,6 @@
-package com.neodent.notification;
+package com.neodent.notification.service;
 
+import com.neodent.notification.EmailDeliveryException;
 import com.neodent.notification.dto.BienvenidaPersonalEmailData;
 import com.neodent.notification.dto.CitaCanceladaEmailData;
 import com.neodent.notification.dto.CitaConfirmadaEmailData;
@@ -39,21 +40,18 @@ public class BrevoEmailService implements EmailService {
     @Value("${brevo.sender.name}")
     private String senderName;
 
-    @Async("taskExecutor")
     @Override
     public void enviarOtpLogin(String destinatario, String codigo) {
         String html = renderTemplate(AppConstants.PlantillasEmail.LOGIN_OTP, codigo);
         enviar(destinatario, "Código de acceso - NeoDent", html);
     }
 
-    @Async("taskExecutor")
     @Override
     public void enviarVerificacionEmail(String destinatario, String codigo) {
         String html = renderTemplate(AppConstants.PlantillasEmail.EMAIL_VERIFICATION, codigo);
         enviar(destinatario, "Confirma tu correo - NeoDent", html);
     }
 
-    @Async("taskExecutor")
     @Override
     public void enviarOtpActivacionCuenta(String destinatario, String codigo) {
         String html = renderTemplate(AppConstants.PlantillasEmail.ACCOUNT_ACTIVATION_OTP, codigo);
@@ -77,7 +75,6 @@ public class BrevoEmailService implements EmailService {
         enviar(destinatario, "Tu cita ha sido programada - NeoDent", html);
     }
 
-    @Async("taskExecutor")
     @Override
     public void enviarRestablecimientoContrasena(String destinatario, String resetUrl) {
         Context context = new Context();
@@ -98,7 +95,7 @@ public class BrevoEmailService implements EmailService {
     }
 
     private static final int MAX_INTENTOS = 3;
-    private static final long ESPERA_REINTENTO_MS = 1000L;
+    private static final long ESPERA_REINTENTO_BASE_MS = 1000L;
 
     private void enviar(String destinatario, String asunto, String html) {
         Map<String, Object> body = Map.of(
@@ -124,18 +121,37 @@ public class BrevoEmailService implements EmailService {
                 return;
             } catch (Exception ex) {
                 if (intento < MAX_INTENTOS) {
-                    log.warn("Intento {}/{} falló al enviar correo a {} con asunto '{}' ({}: {}). Reintentando en {}ms...",
-                        intento, MAX_INTENTOS, destinatario, asunto, ex.getClass().getSimpleName(), ex.getMessage(), ESPERA_REINTENTO_MS);
+                    long espera = ESPERA_REINTENTO_BASE_MS * intento;
+                    log.warn(
+                        "Intento {}/{} falló al enviar correo a {} con asunto '{}' ({}: {}). Reintentando en {}ms...",
+                        intento,
+                        MAX_INTENTOS,
+                        destinatario,
+                        asunto,
+                        ex.getClass().getSimpleName(),
+                        ex.getMessage(),
+                        espera
+                    );
+
                     try {
-                        Thread.sleep(ESPERA_REINTENTO_MS);
+                        Thread.sleep(espera);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
-                        log.error("Interrupción durante la espera de reintento de envío de correo", ie);
-                        return;
+                        throw new EmailDeliveryException("El envío del correo fue interrumpido", ie);
                     }
+
                 } else {
-                    log.error("Error definitivo al enviar correo a {} con asunto '{}' tras {} intentos: {}",
-                        destinatario, asunto, MAX_INTENTOS, ex.getMessage(), ex);
+
+                    log.error(
+                        "Error definitivo al enviar correo a {} con asunto '{}' tras {} intentos: {}",
+                        destinatario,
+                        asunto,
+                        MAX_INTENTOS,
+                        ex.getMessage(),
+                        ex
+                    );
+
+                    throw new EmailDeliveryException("No se pudo enviar el correo electrónico", ex);
                 }
             }
         }

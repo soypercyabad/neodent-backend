@@ -2,7 +2,7 @@ package com.neodent.auth.service;
 
 import com.neodent.auth.model.CodigoVerificacion;
 import com.neodent.auth.repository.CodigoVerificacionRepository;
-import com.neodent.notification.EmailService;
+import com.neodent.notification.service.EmailService;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.UnauthorizedException;

@@ -2,8 +2,8 @@ package com.neodent.auth.service;
 
 import com.neodent.auth.model.TokenAccion;
 import com.neodent.auth.repository.TokenAccionRepository;
-import com.neodent.notification.EmailService;
 import com.neodent.notification.dto.InvitacionCuentaEmailData;
+import com.neodent.notification.service.EmailService;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.shared.constants.AppConstants;
