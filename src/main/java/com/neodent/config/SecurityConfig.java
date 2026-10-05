@@ -55,7 +55,9 @@ public class SecurityConfig {
 
                 /* Autenticación / registro / activación */
                 .requestMatchers(
-                    "/api/auth/**"
+                    "/api/auth/**",
+                    "/api/terminos-condiciones",
+                    "/api/terminos-condiciones/info"
                 ).permitAll()
 
                 /* Consulta de pacientes */
@@ -307,6 +309,15 @@ public class SecurityConfig {
 ).hasRole(
     AppConstants.Roles.ADMIN
 )
+
+
+                /* Administración de términos y condiciones (S3): únicamente ADMIN */
+                .requestMatchers(
+                    "/api/terminos-condiciones/admin",
+                    "/api/terminos-condiciones/admin/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
 
                 /* Todo lo no definido explícitamente queda bloqueado.*/
                 .anyRequest().denyAll()

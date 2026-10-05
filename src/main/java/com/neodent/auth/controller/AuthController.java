@@ -46,15 +46,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+
 import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
 @Tag(name = "Autenticación", description = "Operaciones de autenticación y seguridad de NeoDent")
 public class AuthController {
 
@@ -66,6 +65,27 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookieService refreshCookieService;
     private final AuthenticatedUserService authenticatedUserService;
+
+    public AuthController(
+        AuthService authService,
+        PatientRegistrationService patientRegistrationService,
+        OtpService otpService,
+        AccountActivationService accountActivationService,
+        PasswordResetService passwordResetService,
+        RefreshTokenService refreshTokenService,
+        RefreshCookieService refreshCookieService,
+        AuthenticatedUserService authenticatedUserService
+    ) {
+        this.authService = authService;
+        this.patientRegistrationService = patientRegistrationService;
+        this.otpService = otpService;
+        this.accountActivationService = accountActivationService;
+        this.passwordResetService = passwordResetService;
+        this.refreshTokenService = refreshTokenService;
+        this.refreshCookieService = refreshCookieService;
+        this.authenticatedUserService = authenticatedUserService;
+    }
+
 
 
 

@@ -1,5 +1,7 @@
 package com.neodent.auth.service;
 
+import java.time.LocalDateTime;
+
 import com.neodent.auth.dto.request.PatientRegistrationConfirmRequest;
 import com.neodent.auth.dto.request.PatientRegistrationInitRequest;
 import com.neodent.auth.dto.request.PatientRegistrationRequest;
@@ -19,6 +21,10 @@ import com.neodent.paciente.model.TipoDocumento;
 import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.paciente.repository.TipoDocumentoRepository;
 import com.neodent.paciente.service.PacienteService;
+import com.neodent.legal.model.AceptacionTerminos;
+import com.neodent.legal.model.TerminosCondiciones;
+import com.neodent.legal.repository.AceptacionTerminosRepository;
+import com.neodent.legal.repository.TerminosCondicionesRepository;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.BusinessException;
 import com.neodent.shared.exception.ConflictException;
@@ -31,15 +37,19 @@ import com.neodent.usuario.repository.EstadoUsuarioRepository;
 import com.neodent.usuario.repository.RolRepository;
 import com.neodent.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Locale;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PatientRegistrationService {
     private final PacienteRepository pacienteRepository;
+    private final AceptacionTerminosRepository aceptacionTerminosRepository;
+    private final TerminosCondicionesRepository terminosCondicionesRepository;
     private final TipoDocumentoRepository tipoDocumentoRepository;
     private final DniService dniService;
     private final TurnstileService turnstileService;
@@ -134,8 +144,8 @@ public class PatientRegistrationService {
         usuario.setEstado(activo);
         usuario.setSegundoFactor(true);
         usuario.setCorreoVerificado(true);
-
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
+        registrarAceptacion(usuarioGuardado);
 
         codigoEntity.setUsuario(usuarioGuardado);
 
@@ -146,6 +156,7 @@ public class PatientRegistrationService {
         );
 
         Paciente paciente = pacienteService.crearConUsuario(pacienteRequest, usuarioGuardado);
+        
 
         return new PatientRegistrationResponse(
             paciente.getId(),
@@ -183,8 +194,8 @@ public class PatientRegistrationService {
         usuario.setEstado(pendiente);
         usuario.setSegundoFactor(true);
         usuario.setCorreoVerificado(false);
-
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
+        registrarAceptacion(usuarioGuardado);
 
         CrearPacienteRequest pacienteRequest = new CrearPacienteRequest(
             tipo.getCodigo(), documento, request.nombres(), request.apellidoPaterno(),
@@ -193,6 +204,7 @@ public class PatientRegistrationService {
         );
 
         Paciente paciente = pacienteService.crearConUsuario(pacienteRequest, usuarioGuardado);
+        
         OtpService.OtpGenerado otp = otpService.generarEmailVerification(usuarioGuardado);
 
         return new PatientRegistrationResponse(
@@ -259,5 +271,21 @@ public class PatientRegistrationService {
             throw new BusinessException("El DNI debe contener exactamente 8 dígitos");
 
         return documento;
+    }
+
+    private void registrarAceptacion(Usuario usuario) {
+        try {
+            terminosCondicionesRepository.findFirstByVigenteTrueOrderByFechaPublicacionDesc().ifPresent(terminos -> {
+                if (!aceptacionTerminosRepository.existsByUsuarioIdAndTerminosId(usuario.getId(), terminos.getId())) {
+                    AceptacionTerminos aceptacion = new AceptacionTerminos();
+                    aceptacion.setUsuario(usuario);
+                    aceptacion.setTerminos(terminos);
+                    aceptacion.setAceptadoEn(LocalDateTime.now());
+                    aceptacionTerminosRepository.save(aceptacion);
+                }
+            });
+        } catch (Exception ex) {
+            log.warn("No se pudo registrar aceptación de términos para usuario {}: {}", usuario.getId(), ex.getMessage());
+        }
     }
 }

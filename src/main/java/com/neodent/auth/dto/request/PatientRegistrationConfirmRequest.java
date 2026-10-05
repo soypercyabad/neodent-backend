@@ -40,5 +40,7 @@ public record PatientRegistrationConfirmRequest(
     String direccion,
 
     @NotBlank @Size(min = 8, max = 100)
-    String password
+    String password,
+
+    Boolean aceptaTerminos
 ) {}

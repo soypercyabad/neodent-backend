@@ -32,5 +32,7 @@ public record PatientRegistrationRequest(
     String password,
     
     @NotBlank 
-    String turnstileToken
+    String turnstileToken,
+
+    Boolean aceptaTerminos
 ) {}

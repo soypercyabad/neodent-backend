@@ -2,6 +2,7 @@ package com.neodent.storage;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.net.URI;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class R2StorageService implements StorageService {
