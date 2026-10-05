@@ -1,5 +1,6 @@
 package com.neodent.legal.controller;
 
+import com.neodent.legal.dto.AceptacionTerminosResponse;
 import com.neodent.legal.dto.TerminosCondicionesResponse;
 import com.neodent.legal.service.TerminosCondicionesService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -7,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,7 +28,7 @@ public class TerminosCondicionesController {
     private final TerminosCondicionesService terminosService;
 
     /* =========================================================
-     * ENDPOINTS PÚBLICOS (Para pacientes y registro)
+     * ENDPOINTS PÚBLICOS
      * ========================================================= */
 
     @Operation(
@@ -43,7 +45,7 @@ public class TerminosCondicionesController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("inline", TerminosCondicionesService.NOMBRE_ARCHIVO_DEFECTO);
+        headers.setContentDisposition(ContentDisposition.inline().filename(TerminosCondicionesService.NOMBRE_ARCHIVO_DEFECTO).build());
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
@@ -51,7 +53,7 @@ public class TerminosCondicionesController {
 
     @Operation(
         summary = "Consultar metadatos de la versión activa",
-        description = "Devuelve el título, versión y tamaño del documento actualmente vigente."
+        description = "Devuelve el título, versión y URL oficial del documento actualmente vigente."
     )
     @GetMapping("/info")
     public ResponseEntity<TerminosCondicionesResponse> obtenerInfoActivo() {
@@ -87,8 +89,23 @@ public class TerminosCondicionesController {
     }
 
     @Operation(
+        summary = "Editar versión existente (Admin)",
+        description = "Actualiza el título, versión y opcionalmente reemplaza el PDF de una versión registrada."
+    )
+    @PutMapping(value = "/admin/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<TerminosCondicionesResponse> editarVersion(
+        @PathVariable Long id,
+        @RequestParam(value = "titulo", required = false) String titulo,
+        @RequestParam(value = "version", required = false) String version,
+        @RequestParam(value = "archivo", required = false) MultipartFile archivo,
+        @RequestParam(value = "activar", required = false) Boolean activar
+    ) {
+        return ResponseEntity.ok(terminosService.editar(id, titulo, version, archivo, activar));
+    }
+
+    @Operation(
         summary = "Activar o desactivar versión de términos (Admin)",
-        description = "Activa una versión para que sea la oficial utilizada por el sistema, o la desactiva."
+        description = "Activa una versión para que sea la oficial utilizada por el sistema."
     )
     @PatchMapping("/admin/{id}/estado")
     public ResponseEntity<TerminosCondicionesResponse> cambiarEstado(
@@ -100,16 +117,16 @@ public class TerminosCondicionesController {
     }
 
     @Operation(
-        summary = "Descargar o visualizar versión específica (Admin)",
-        description = "Obtiene el flujo PDF de una versión específica desde S3."
+        summary = "Visualizar versión específica en el navegador (Admin)",
+        description = "Abre el PDF en una pestaña del navegador con visualizador nativo."
     )
-    @GetMapping("/admin/{id}/descargar")
-    public ResponseEntity<byte[]> descargarVersion(@PathVariable Long id) {
+    @GetMapping("/admin/{id}/ver")
+    public ResponseEntity<byte[]> verVersion(@PathVariable Long id) {
         byte[] pdfBytes = terminosService.obtenerPdfPorId(id);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("inline", "terminos-" + id + ".pdf");
+        headers.setContentDisposition(ContentDisposition.inline().filename("terminos-" + id + ".pdf").build());
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
@@ -117,11 +134,20 @@ public class TerminosCondicionesController {
 
     @Operation(
         summary = "Eliminar versión de términos y condiciones (Admin)",
-        description = "Elimina permanentemente el archivo de S3 y su registro en base de datos."
+        description = "Elimina permanentemente el archivo de S3 y su registro. Solo permitido si no está activa."
     )
     @DeleteMapping("/admin/{id}")
     public ResponseEntity<Void> eliminarVersion(@PathVariable Long id) {
         terminosService.eliminar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+        summary = "Listar personas que aceptaron los términos y condiciones (Admin)",
+        description = "Devuelve el registro de auditoría de todas las personas que aceptaron los términos."
+    )
+    @GetMapping("/admin/aceptaciones")
+    public ResponseEntity<List<AceptacionTerminosResponse>> listarAceptaciones() {
+        return ResponseEntity.ok(terminosService.listarAceptaciones());
     }
 }

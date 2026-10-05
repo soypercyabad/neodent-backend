@@ -13,4 +13,6 @@ public interface StorageService {
     void eliminar(String clave);
 
     boolean existe(String clave);
+
+    String obtenerUrl(String clave);
 }

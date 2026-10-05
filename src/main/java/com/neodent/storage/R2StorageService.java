@@ -41,6 +41,9 @@ public class R2StorageService implements StorageService {
     @Value("${storage.r2.bucket}")
     private String bucket;
 
+    @Value("${storage.r2.public-url:}")
+    private String publicUrl;
+
     private S3Client s3Client;
 
     @PostConstruct
@@ -104,5 +107,18 @@ public class R2StorageService implements StorageService {
             if (ex.statusCode() == 404) { return false; }
             throw new IllegalStateException("No se pudo verificar el archivo en Cloudflare R2.", ex);
         }
+    }
+
+    @Override
+    public String obtenerUrl(String clave) {
+        if (publicUrl != null && !publicUrl.isBlank()) {
+            String base = publicUrl.endsWith("/") ? publicUrl.substring(0, publicUrl.length() - 1) : publicUrl;
+            return base + "/" + clave;
+        }
+        String base = endpoint != null && endpoint.endsWith("/") ? endpoint.substring(0, endpoint.length() - 1) : endpoint;
+        if (base != null && !base.contains(bucket)) {
+            base = base.replace("https://", "https://" + bucket + ".");
+        }
+        return (base != null ? base : "") + "/" + clave;
     }
 }

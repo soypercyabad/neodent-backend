@@ -1,8 +1,15 @@
 package com.neodent.legal.service;
 
+import com.neodent.legal.dto.AceptacionTerminosResponse;
 import com.neodent.legal.dto.TerminosCondicionesResponse;
+import com.neodent.legal.model.AceptacionTerminos;
 import com.neodent.legal.model.TerminosCondiciones;
+import com.neodent.legal.repository.AceptacionTerminosRepository;
 import com.neodent.legal.repository.TerminosCondicionesRepository;
+import com.neodent.paciente.model.Paciente;
+import com.neodent.paciente.repository.PacienteRepository;
+import com.neodent.personal.model.Personal;
+import com.neodent.personal.repository.PersonalRepository;
 import com.neodent.shared.exception.BusinessException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.storage.StorageService;
@@ -17,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -29,6 +37,9 @@ public class TerminosCondicionesService {
     private static final long MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
     private final TerminosCondicionesRepository repository;
+    private final AceptacionTerminosRepository aceptacionRepository;
+    private final PacienteRepository pacienteRepository;
+    private final PersonalRepository personalRepository;
     private final StorageService storageService;
 
     @Transactional(readOnly = true)
@@ -82,24 +93,62 @@ public class TerminosCondicionesService {
         }
     }
 
-    private void desactivarTodas() {
-        try {
-            List<TerminosCondiciones> todas = repository.findAll();
-            for (TerminosCondiciones t : todas) {
-                if (Boolean.TRUE.equals(t.getVigente())) {
-                    t.setVigente(false);
-                }
-            }
-            repository.saveAll(todas);
-        } catch (Exception ex) {
-            log.warn("Fallo al desactivar versiones anteriores: {}", ex.getMessage());
+    @Transactional
+    public TerminosCondicionesResponse editar(Long id, String titulo, String version, MultipartFile nuevoArchivo, Boolean activar) {
+        TerminosCondiciones doc = repository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Documento de términos no encontrado"));
+
+        String ver = (version == null || version.isBlank()) ? doc.getVersion() : version.trim();
+        if (!ver.equalsIgnoreCase(doc.getVersion()) && repository.existsByVersion(ver)) {
+            throw new BusinessException("Ya existe otra versión registrada con el código: " + ver);
         }
+
+        String tit = (titulo == null || titulo.isBlank()) ? doc.getTitulo() : titulo.trim();
+        doc.setTitulo(tit);
+        doc.setVersion(ver);
+
+        // Si se seleccionó un nuevo archivo PDF, se reemplaza en S3
+        if (nuevoArchivo != null && !nuevoArchivo.isEmpty()) {
+            validarArchivoPdf(nuevoArchivo);
+            String originalFilename = nuevoArchivo.getOriginalFilename() != null ? nuevoArchivo.getOriginalFilename() : NOMBRE_ARCHIVO_DEFECTO;
+            String sanitizedFilename = sanitizarNombre(originalFilename);
+            String nuevaClaveS3 = "documentos/legales/" + System.currentTimeMillis() + "_" + ver.replace(" ", "_") + "_" + sanitizedFilename;
+
+            try {
+                byte[] bytes = nuevoArchivo.getBytes();
+                storageService.guardar(nuevaClaveS3, bytes, CONTENT_TYPE_PDF);
+
+                // Intentar eliminar el anterior si era un archivo en la misma carpeta
+                if (doc.getContenido() != null && doc.getContenido().startsWith("documentos/legales/")) {
+                    try {
+                        storageService.eliminar(doc.getContenido());
+                    } catch (Exception ignored) {}
+                }
+
+                doc.setContenido(nuevaClaveS3);
+            } catch (IOException ex) {
+                throw new BusinessException("No se pudo leer el nuevo archivo PDF: " + ex.getMessage());
+            } catch (Exception ex) {
+                throw new BusinessException("No se pudo actualizar el archivo en S3: " + ex.getMessage());
+            }
+        }
+
+        if (Boolean.TRUE.equals(activar) && !Boolean.TRUE.equals(doc.getVigente())) {
+            desactivarTodas();
+            doc.setVigente(true);
+        }
+
+        return mapearResponse(repository.save(doc));
     }
 
     @Transactional
     public TerminosCondicionesResponse cambiarEstado(Long id, boolean activo) {
         TerminosCondiciones doc = repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Documento de términos no encontrado"));
+
+        if (!activo && Boolean.TRUE.equals(doc.getVigente())) {
+            throw new BusinessException("No se puede desactivar directamente la versión oficial. Para cambiarla, activa otra versión.");
+        }
 
         if (activo) {
             desactivarTodas();
@@ -116,6 +165,10 @@ public class TerminosCondicionesService {
         TerminosCondiciones doc = repository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Documento de términos no encontrado"));
 
+        if (Boolean.TRUE.equals(doc.getVigente())) {
+            throw new BusinessException("No se puede eliminar la versión de términos que está actualmente activa.");
+        }
+
         try {
             if (doc.getContenido() != null && doc.getContenido().startsWith("documentos/")) {
                 if (storageService.existe(doc.getContenido())) {
@@ -127,6 +180,53 @@ public class TerminosCondicionesService {
         }
 
         repository.delete(doc);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AceptacionTerminosResponse> listarAceptaciones() {
+        List<AceptacionTerminos> lista = aceptacionRepository.findAllWithUsuarioAndTerminos();
+        return lista.stream().map(a -> {
+            Long usuarioId = a.getUsuario().getId();
+            String correo = a.getUsuario().getCorreo();
+
+            String nombreCompleto = "Usuario #" + usuarioId;
+            String numeroDoc = "—";
+
+            Optional<Paciente> pacienteOpt = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId);
+            if (pacienteOpt.isPresent()) {
+                Paciente p = pacienteOpt.get();
+                nombreCompleto = String.format("%s %s %s",
+                    p.getNombres(),
+                    p.getApellidoPaterno(),
+                    p.getApellidoMaterno() != null ? p.getApellidoMaterno() : ""
+                ).trim();
+                numeroDoc = p.getNumeroDocumento();
+            } else {
+                Optional<Personal> personalOpt = personalRepository.findByUsuarioId(usuarioId);
+                if (personalOpt.isPresent()) {
+                    Personal pers = personalOpt.get();
+                    nombreCompleto = String.format("%s %s %s",
+                        pers.getNombres(),
+                        pers.getApellidoPaterno(),
+                        pers.getApellidoMaterno() != null ? pers.getApellidoMaterno() : ""
+                    ).trim();
+                    numeroDoc = pers.getNumeroDocumento();
+                }
+            }
+
+            return new AceptacionTerminosResponse(
+                a.getId(),
+                usuarioId,
+                correo,
+                nombreCompleto,
+                numeroDoc,
+                a.getTerminos().getVersion(),
+                a.getTerminos().getTitulo(),
+                a.getAceptadoEn(),
+                a.getIp(),
+                a.getAgenteUsuario()
+            );
+        }).toList();
     }
 
     @Transactional(readOnly = true)
@@ -149,14 +249,12 @@ public class TerminosCondicionesService {
             }
         }
 
-        // Fallback a clave por defecto en S3
         if (storageService.existe(CLAVE_S3_DEFECTO)) {
             try {
                 return storageService.obtener(CLAVE_S3_DEFECTO);
             } catch (Exception ignored) {}
         }
 
-        // Último fallback: texto plano si la BD solo tiene texto
         if (opt.isPresent() && opt.get().getContenido() != null) {
             return opt.get().getContenido().getBytes(StandardCharsets.UTF_8);
         }
@@ -171,6 +269,7 @@ public class TerminosCondicionesService {
             return mapearResponse(opt.get());
         }
 
+        String urlS3Directa = storageService.obtenerUrl(CLAVE_S3_DEFECTO);
         return new TerminosCondicionesResponse(
             null,
             "Términos y Condiciones de Uso de NeoDent",
@@ -179,10 +278,25 @@ public class TerminosCondicionesService {
             CLAVE_S3_DEFECTO,
             0L,
             true,
-            "/api/terminos-condiciones",
+            urlS3Directa,
+            urlS3Directa,
             LocalDateTime.now(),
             LocalDateTime.now()
         );
+    }
+
+    private void desactivarTodas() {
+        try {
+            List<TerminosCondiciones> todas = repository.findAll();
+            for (TerminosCondiciones t : todas) {
+                if (Boolean.TRUE.equals(t.getVigente())) {
+                    t.setVigente(false);
+                }
+            }
+            repository.saveAll(todas);
+        } catch (Exception ex) {
+            log.warn("Fallo al desactivar versiones anteriores: {}", ex.getMessage());
+        }
     }
 
     private byte[] resolverBytesDocumento(TerminosCondiciones doc) {
@@ -202,6 +316,7 @@ public class TerminosCondicionesService {
     private TerminosCondicionesResponse mapearResponse(TerminosCondiciones doc) {
         String clave = doc.getContenido() != null ? doc.getContenido() : CLAVE_S3_DEFECTO;
         String nombreArchivo = clave.contains("/") ? clave.substring(clave.lastIndexOf('/') + 1) : NOMBRE_ARCHIVO_DEFECTO;
+        String urlS3Directa = storageService.obtenerUrl(clave);
 
         return new TerminosCondicionesResponse(
             doc.getId(),
@@ -211,7 +326,8 @@ public class TerminosCondicionesService {
             clave,
             0L,
             Boolean.TRUE.equals(doc.getVigente()),
-            "/api/terminos-condiciones/admin/" + doc.getId() + "/descargar",
+            urlS3Directa,
+            urlS3Directa,
             doc.getFechaPublicacion(),
             doc.getFechaCreacion() != null ? doc.getFechaCreacion() : doc.getFechaPublicacion()
         );

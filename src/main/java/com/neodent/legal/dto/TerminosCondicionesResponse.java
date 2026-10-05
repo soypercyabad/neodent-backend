@@ -11,6 +11,7 @@ public record TerminosCondicionesResponse(
     Long tamanoBytes,
     Boolean activo,
     String urlVisualizar,
+    String urlS3,
     LocalDateTime fechaCreacion,
     LocalDateTime fechaActualizacion
 ) {}
