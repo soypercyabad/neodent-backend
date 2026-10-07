@@ -18,6 +18,8 @@ public interface CodigoVerificacionRepository
 
     List<CodigoVerificacion> findAllByUsuarioIdAndTipoAndUsadoFalse(Long usuarioId, String tipo);
 
+    List<CodigoVerificacion> findAllByCorreoDestinoIgnoreCaseAndTipoAndUsadoFalse(String correoDestino, String tipo);
+
     @EntityGraph(attributePaths = "paciente")
     Optional<CodigoVerificacion> findByIdAndTipoAndPacienteIsNotNull(Long id, String tipo);
 }

@@ -7,6 +7,7 @@ import com.neodent.auth.dto.request.PatientRegistrationCheckRequest;
 import com.neodent.auth.dto.request.PatientRegistrationConfirmRequest;
 import com.neodent.auth.dto.request.PatientRegistrationInitRequest;
 import com.neodent.auth.dto.response.PatientRegistrationInitResponse;
+import com.neodent.auth.dto.response.PatientRegistrationValidationResponse;
 import com.neodent.auth.dto.request.PatientRegistrationRequest;
 import com.neodent.auth.dto.request.ResendCodeRequest;
 import com.neodent.auth.dto.request.ResetPasswordRequest;
@@ -184,11 +185,37 @@ public class AuthController {
 
 
     
+
+
+    @Operation(
+        summary = "Validar datos del autoregistro",
+        description = """
+            Valida todos los datos del formulario antes de mostrar la pantalla OTP.
+            No genera código, no envía correo y no crea usuario ni paciente.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Datos válidos para continuar"),
+        @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "409", description = "Documento, correo o teléfono ya registrado"),
+        @ApiResponse(responseCode = "429", description = "Demasiadas solicitudes")
+    })
+    @PostMapping("/patient-registration/validate")
+    public PatientRegistrationValidationResponse validarRegistroPaciente(
+        @Valid @RequestBody PatientRegistrationInitRequest request,
+        HttpServletRequest httpRequest
+    ) {
+        String ip = obtenerIpCliente(httpRequest);
+        return patientRegistrationService.validarRegistro(request, ip);
+    }
+
+
     @Operation(
         summary = "Iniciar registro de paciente (solicitar código)",
         description = """
-            Valida disponibilidad de documento y correo electrónico.
-            Genera y envía un código OTP al correo sin crear aún la cuenta en base de datos.
+            Se ejecuta desde la pantalla OTP.
+            Revalida los datos, valida Turnstile y recién entonces genera y envía el código.
+            No crea todavía usuario ni paciente.
             """
     )
     @ApiResponses({

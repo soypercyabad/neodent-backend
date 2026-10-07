@@ -115,12 +115,23 @@ public class OtpService {
 
     @Transactional
     public OtpGenerado generarRegistroEmailVerification(String correo) {
+        String correoNormalizado = correo.trim().toLowerCase();
+
+        List<CodigoVerificacion> anteriores = repository
+            .findAllByCorreoDestinoIgnoreCaseAndTipoAndUsadoFalse(correoNormalizado, TIPO_EMAIL);
+
+        anteriores.forEach(anterior -> anterior.setUsado(true));
+        if (!anteriores.isEmpty()) {
+            repository.saveAll(anteriores);
+            repository.flush();
+        }
+
         String codigo = String.format("%06d", random.nextInt(1_000_000));
 
         CodigoVerificacion otp = new CodigoVerificacion();
         otp.setUsuario(null);
         otp.setPaciente(null);
-        otp.setCorreoDestino(correo);
+        otp.setCorreoDestino(correoNormalizado);
         otp.setTipo(TIPO_EMAIL);
         otp.setHashCodigo(passwordEncoder.encode(codigo));
         otp.setFechaExpiracion(LocalDateTime.now(clock).plusMinutes(EXPIRACION_MINUTOS));
@@ -129,7 +140,7 @@ public class OtpService {
         otp.setUsado(false);
 
         CodigoVerificacion guardado = repository.save(otp);
-        emailService.enviarVerificacionEmail(correo, codigo);
+        emailService.enviarVerificacionEmail(correoNormalizado, codigo);
 
         return new OtpGenerado(guardado.getId(), codigo);
     }
