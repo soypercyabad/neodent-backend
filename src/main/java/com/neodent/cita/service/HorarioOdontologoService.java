@@ -8,11 +8,14 @@ import com.neodent.cita.model.HorarioOdontologo;
 import com.neodent.cita.repository.HorarioOdontologoRepository;
 import com.neodent.especialidad.model.OdontologoEspecialidad;
 import com.neodent.especialidad.repository.OdontologoEspecialidadRepository;
+import com.neodent.odontologo.repository.OdontologoRepository;
 import com.neodent.sede.model.Sede;
 import com.neodent.sede.repository.SedeRepository;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +32,7 @@ public class HorarioOdontologoService {
     private final HorarioOdontologoRepository horarioRepository;
     private final OdontologoEspecialidadRepository odontologoEspecialidadRepository;
     private final SedeRepository sedeRepository;
+    private final OdontologoRepository odontologoRepository;
 
     @Transactional
     public HorarioOdontologoResponse crear(CrearHorarioOdontologoRequest request) {
@@ -39,12 +43,17 @@ public class HorarioOdontologoService {
             .findByIdAndActivoTrue(request.odontologoEspecialidadId())
             .orElseThrow(() -> new ResourceNotFoundException("Odontólogo/especialidad no encontrado"));
 
+        Long odontologoId = oe.getOdontologo().getId();
+
+        odontologoRepository.bloquearParaReserva(odontologoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Odontólogo no encontrado"));
+
         Sede sede = sedeRepository.findByIdAndActivoTrue(request.sedeId())
             .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada"));
 
         boolean cruce = horarioRepository.existeCruceHorario(
             null,
-            oe.getOdontologo().getId(),
+            odontologoId,
             request.diaSemana(),
             request.horaInicio(),
             request.horaFin(),
@@ -54,7 +63,7 @@ public class HorarioOdontologoService {
 
         if (cruce) {
             throw new ConflictException(
-                "El horario se cruza con otro horario activo del odontólogo dentro de la misma vigencia"
+                "El odontólogo ya tiene un horario que se cruza con el día, las horas y el periodo de vigencia seleccionados. Revisa también sus horarios en otras sedes."
             );
         }
 
@@ -68,7 +77,11 @@ public class HorarioOdontologoService {
         horario.setFechaFinVigencia(request.fechaFinVigencia());
         horario.setActivo(true);
 
-        return mapear(horarioRepository.save(horario));
+        try {
+            return mapear(horarioRepository.saveAndFlush(horario));
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException("No se pudo registrar el horario porque existe otro horario incompatible para el odontólogo.");
+        }
     }
 
     @Transactional
@@ -83,12 +96,17 @@ public class HorarioOdontologoService {
             .findByIdAndActivoTrue(request.odontologoEspecialidadId())
             .orElseThrow(() -> new ResourceNotFoundException("Odontólogo/especialidad no encontrado"));
 
+        Long odontologoId = oe.getOdontologo().getId();
+
+        odontologoRepository.bloquearParaReserva(odontologoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Odontólogo no encontrado"));
+
         Sede sede = sedeRepository.findByIdAndActivoTrue(request.sedeId())
             .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada"));
 
         boolean cruce = horarioRepository.existeCruceHorario(
             id,
-            oe.getOdontologo().getId(),
+            odontologoId,
             request.diaSemana(),
             request.horaInicio(),
             request.horaFin(),
@@ -111,7 +129,11 @@ public class HorarioOdontologoService {
         horario.setFechaFinVigencia(request.fechaFinVigencia());
         horario.setActivo(true);
 
-        return mapear(horarioRepository.save(horario));
+        try {
+            return mapear(horarioRepository.saveAndFlush(horario));
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException("No se pudo actualizar el horario porque existe otro horario incompatible para el odontólogo.");
+        }
     }
 
     @Transactional
