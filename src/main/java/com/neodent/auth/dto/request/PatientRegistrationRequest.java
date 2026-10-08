@@ -28,7 +28,11 @@ public record PatientRegistrationRequest(
 
     String direccion,
 
-    @NotBlank @Size(min = 8, max = 100) 
+    @NotBlank @Size(min = 8, max = 100)
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s]).+$",
+        message = "La contraseña debe incluir al menos una mayúscula, una minúscula, un número y un carácter especial"
+    )
     String password,
     
     @NotBlank 

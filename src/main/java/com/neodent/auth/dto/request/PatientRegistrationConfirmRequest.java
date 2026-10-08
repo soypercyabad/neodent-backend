@@ -56,6 +56,10 @@ public record PatientRegistrationConfirmRequest(
         max = 100,
         message = "La contraseña debe tener entre 8 y 100 caracteres"
     )
+    @Pattern(
+        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z\\d\\s]).+$",
+        message = "La contraseña debe incluir al menos una mayúscula, una minúscula, un número y un carácter especial"
+    )
     String password,
 
     @NotNull(message = "Debes indicar la aceptación de los términos")
