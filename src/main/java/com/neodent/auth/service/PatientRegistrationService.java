@@ -14,6 +14,7 @@ import com.neodent.auth.dto.response.VerifyEmailResponse;
 import com.neodent.auth.model.CodigoVerificacion;
 import com.neodent.dni.DniService;
 import com.neodent.dni.dto.DniResponse;
+import com.neodent.dni.util.DniDataMasker;
 import com.neodent.legal.model.AceptacionTerminos;
 import com.neodent.legal.repository.AceptacionTerminosRepository;
 import com.neodent.legal.repository.TerminosCondicionesRepository;
@@ -104,9 +105,9 @@ public class PatientRegistrationService {
             return new PatientRegistrationCheckResponse(
                 tipo.getCodigo(),
                 documento,
-                response.nombres(),
-                response.apellidoPaterno(),
-                response.apellidoMaterno(),
+                DniDataMasker.enmascararNombres(response.nombres()),
+                DniDataMasker.capitalizarTexto(response.apellidoPaterno()),
+                DniDataMasker.enmascararApellidoMaterno(response.apellidoMaterno()),
                 false
             );
         } catch (BusinessException ex) {
@@ -274,15 +275,21 @@ public class PatientRegistrationService {
 
         codigoEntity.setUsuario(usuarioGuardado);
 
+        NombresCompletosPaciente nombresOficiales = resolverNombresPaciente(
+            tipo,
+            documento,
+            request.nombres(),
+            request.apellidoPaterno(),
+            request.apellidoMaterno()
+        );
+
         CrearPacienteRequest pacienteRequest =
             new CrearPacienteRequest(
                 tipo.getCodigo(),
                 documento,
-                request.nombres().trim(),
-                request.apellidoPaterno().trim(),
-                normalizarTextoOpcional(
-                    request.apellidoMaterno()
-                ),
+                nombresOficiales.nombres(),
+                nombresOficiales.apellidoPaterno(),
+                nombresOficiales.apellidoMaterno(),
                 request.fechaNacimiento(),
                 telefono,
                 email,
@@ -389,13 +396,21 @@ public class PatientRegistrationService {
 
         registrarAceptacion(usuarioGuardado);
 
+        NombresCompletosPaciente nombresOficiales = resolverNombresPaciente(
+            tipo,
+            documento,
+            request.nombres(),
+            request.apellidoPaterno(),
+            request.apellidoMaterno()
+        );
+
         CrearPacienteRequest pacienteRequest =
             new CrearPacienteRequest(
                 tipo.getCodigo(),
                 documento,
-                request.nombres(),
-                request.apellidoPaterno(),
-                request.apellidoMaterno(),
+                nombresOficiales.nombres(),
+                nombresOficiales.apellidoPaterno(),
+                nombresOficiales.apellidoMaterno(),
                 request.fechaNacimiento(),
                 request.telefono(),
                 email,
@@ -736,6 +751,49 @@ public class PatientRegistrationService {
             );
         }
     }
+
+    private NombresCompletosPaciente resolverNombresPaciente(
+        TipoDocumento tipo,
+        String documento,
+        String nombresRequest,
+        String paternoRequest,
+        String maternoRequest
+    ) {
+        String nombres = nombresRequest != null ? nombresRequest.trim() : "";
+        String paterno = paternoRequest != null ? paternoRequest.trim() : "";
+        String materno = normalizarTextoOpcional(maternoRequest);
+
+        if ("DNI".equalsIgnoreCase(tipo.getCodigo())) {
+            try {
+                DniResponse oficial = dniService.buscarPorDni(documento);
+                if (oficial != null) {
+                    if (oficial.nombres() != null && !oficial.nombres().isBlank()) {
+                        nombres = oficial.nombres().trim();
+                    }
+                    if (oficial.apellidoPaterno() != null && !oficial.apellidoPaterno().isBlank()) {
+                        paterno = oficial.apellidoPaterno().trim();
+                    }
+                    if (oficial.apellidoMaterno() != null && !oficial.apellidoMaterno().isBlank()) {
+                        materno = oficial.apellidoMaterno().trim();
+                    }
+                }
+            } catch (Exception ex) {
+                log.warn(
+                    "No se pudo consultar RENIEC para obtener nombres completos de DNI {}, usando datos del request: {}",
+                    documento,
+                    ex.getMessage()
+                );
+            }
+        }
+
+        return new NombresCompletosPaciente(nombres, paterno, materno);
+    }
+
+    private record NombresCompletosPaciente(
+        String nombres,
+        String apellidoPaterno,
+        String apellidoMaterno
+    ) {}
 
     private record DatosRegistroNormalizados(
         TipoDocumento tipo,

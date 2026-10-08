@@ -1,8 +1,11 @@
 package com.neodent.dni;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.neodent.dni.dto.ApisNetDniResponse;
 import com.neodent.dni.dto.DniResponse;
 import com.neodent.shared.exception.BusinessException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatusCode;
@@ -11,11 +14,24 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.Duration;
+
+@Slf4j
 @Service
 @Profile("!mock-dni")
 public class ApisNetDniService implements DniService {
 
     private final RestClient restClient;
+
+    /**
+     * Caché en memoria optimizada para Google Cloud Run (Free Tier).
+     * Mantiene los DNIs consultados durante 2 horas (tiempo de sobra para completar el registro con OTP)
+     * con un tope de 1,000 registros (~450 KB de RAM, totalmente insignificante).
+     */
+    private final Cache<String, DniResponse> dniCache = Caffeine.newBuilder()
+        .expireAfterWrite(Duration.ofHours(2))
+        .maximumSize(1_000)
+        .build();
 
     public ApisNetDniService(
         RestClient.Builder restClientBuilder,
@@ -32,6 +48,12 @@ public class ApisNetDniService implements DniService {
     public DniResponse buscarPorDni(String dni) {
         validarDni(dni);
 
+        DniResponse cached = dniCache.getIfPresent(dni);
+        if (cached != null) {
+            log.debug("DNI {} obtenido de caché local (0 llamadas a Apis.net)", dni);
+            return cached;
+        }
+
         try {
             ApisNetDniResponse response = restClient
                 .get()
@@ -43,7 +65,15 @@ public class ApisNetDniService implements DniService {
                 throw new BusinessException("No se obtuvo información para el DNI consultado");
             }
 
-            return new DniResponse(dni, response.nombres(), response.apellidoPaterno(), response.apellidoMaterno());
+            DniResponse dniResponse = new DniResponse(
+                dni,
+                response.nombres(),
+                response.apellidoPaterno(),
+                response.apellidoMaterno()
+            );
+
+            dniCache.put(dni, dniResponse);
+            return dniResponse;
 
         } catch (RestClientResponseException ex) {
             HttpStatusCode status = ex.getStatusCode();
