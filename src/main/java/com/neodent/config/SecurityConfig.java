@@ -303,12 +303,14 @@ public class SecurityConfig {
                 )
 
                 /* Catálogo de roles: solo ADMIN */
-.requestMatchers(
-    "/api/roles",
-    "/api/roles/**"
-).hasRole(
-    AppConstants.Roles.ADMIN
-)
+                .requestMatchers(
+                    "/api/roles",
+                    "/api/roles/**",
+                    "/api/modulos",
+                    "/api/modulos/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
 
 
                 /* Administración de términos y condiciones (S3): únicamente ADMIN */

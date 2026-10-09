@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Table(name = "rol")
 @Getter
@@ -25,6 +28,14 @@ public class Rol {
 
     @Column(name = "activo", nullable = false)
     private Boolean activo;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "rol_modulo",
+        joinColumns = @JoinColumn(name = "id_rol"),
+        inverseJoinColumns = @JoinColumn(name = "id_modulo")
+    )
+    private Set<Modulo> modulos = new HashSet<>();
 
     @Override
     public boolean equals(Object o) {

@@ -1,5 +1,7 @@
 package com.neodent.auth.dto.response;
 
+import com.neodent.usuario.dto.response.ModuloResponse;
+
 import java.util.List;
 
 public record AuthenticatedUserResponse(
@@ -11,5 +13,6 @@ public record AuthenticatedUserResponse(
     List<String> roles,
     String estado,
     Long idPersonal,
-    Long idPaciente
+    Long idPaciente,
+    List<ModuloResponse> modulos
 ) {}

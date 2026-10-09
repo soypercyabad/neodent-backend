@@ -4,14 +4,19 @@ import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.usuario.dto.request.RolRequest;
+import com.neodent.usuario.dto.response.ModuloResponse;
 import com.neodent.usuario.dto.response.RolResponse;
+import com.neodent.usuario.model.Modulo;
 import com.neodent.usuario.model.Rol;
+import com.neodent.usuario.repository.ModuloRepository;
 import com.neodent.usuario.repository.RolRepository;
 import com.neodent.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -27,6 +32,7 @@ public class RolService {
 
     private final RolRepository rolRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ModuloRepository moduloRepository;
 
     @Transactional(readOnly = true)
     public List<RolResponse> listar(Boolean activo) {
@@ -60,6 +66,11 @@ public class RolService {
         rol.setDescripcion(limpiar(request.descripcion()));
         rol.setActivo(true);
 
+        if (request.modulosIds() != null && !request.modulosIds().isEmpty()) {
+            List<Modulo> modulos = moduloRepository.findAllByIdInAndActivoTrue(request.modulosIds());
+            rol.setModulos(new HashSet<>(modulos));
+        }
+
         return toResponse(rolRepository.save(rol));
     }
 
@@ -79,6 +90,11 @@ public class RolService {
 
         rol.setNombre(nuevo);
         rol.setDescripcion(limpiar(request.descripcion()));
+
+        if (request.modulosIds() != null) {
+            List<Modulo> modulos = moduloRepository.findAllByIdInAndActivoTrue(request.modulosIds());
+            rol.setModulos(new HashSet<>(modulos));
+        }
 
         return toResponse(rolRepository.save(rol));
     }
@@ -121,7 +137,7 @@ public class RolService {
     }
 
     private String normalizarNombre(String valor) {
-        String nombre = valor.trim().toUpperCase()
+            String nombre = valor.trim().toUpperCase()
             .replaceAll("[^A-Z0-9_]+", "_")
             .replaceAll("^_+|_+$", "");
 
@@ -137,12 +153,28 @@ public class RolService {
     }
 
     private RolResponse toResponse(Rol rol) {
+        List<ModuloResponse> modulos = rol.getModulos() == null ? List.of() :
+            rol.getModulos().stream()
+                .filter(m -> Boolean.TRUE.equals(m.getActivo()))
+                .sorted(Comparator.comparingInt(Modulo::getOrden))
+                .map(m -> new ModuloResponse(
+                    m.getId(),
+                    m.getCodigo(),
+                    m.getNombre(),
+                    m.getDescripcion(),
+                    m.getRuta(),
+                    m.getIcono(),
+                    m.getOrden()
+                ))
+                .toList();
+
         return new RolResponse(
             rol.getId(),
             rol.getNombre(),
             rol.getDescripcion(),
             rol.getActivo(),
-            ROLES_SISTEMA.contains(rol.getNombre().toUpperCase())
+            ROLES_SISTEMA.contains(rol.getNombre().toUpperCase()),
+            modulos
         );
     }
 }
