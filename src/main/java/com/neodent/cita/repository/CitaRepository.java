@@ -218,4 +218,57 @@ public interface CitaRepository
     ) {
         return buscarAgendaDinamica(odontologoId, estado, sedeId, inicioDia, finDia);
     }
+
+    @Query("""
+        SELECT COUNT(c)
+        FROM Cita c
+        WHERE c.fechaHoraInicio >= :inicio AND c.fechaHoraInicio < :fin
+    """)
+    long contarCitasEntre(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
+
+    @Query("""
+        SELECT c FROM Cita c
+        JOIN FETCH c.paciente p
+        JOIN FETCH c.estado e
+        LEFT JOIN FETCH c.servicioSolicitado s
+        JOIN FETCH c.odontologoEspecialidad oe
+        JOIN FETCH oe.odontologo o
+        JOIN FETCH o.personal per
+        JOIN FETCH c.sede sd
+        WHERE (:desde IS NULL OR c.fechaHoraInicio >= :desde)
+        ORDER BY c.fechaHoraInicio DESC
+    """)
+    List<Cita> buscarCitasDashboardAdmin(@Param("desde") LocalDateTime desde);
+
+    @Query("""
+        SELECT c FROM Cita c
+        JOIN FETCH c.paciente p
+        JOIN FETCH c.estado e
+        LEFT JOIN FETCH c.servicioSolicitado s
+        JOIN FETCH c.odontologoEspecialidad oe
+        JOIN FETCH oe.odontologo o
+        JOIN FETCH o.personal per
+        JOIN FETCH c.sede sd
+        WHERE o.personal.usuario.id = :usuarioId
+        AND (:desde IS NULL OR c.fechaHoraInicio >= :desde)
+        ORDER BY c.fechaHoraInicio DESC
+    """)
+    List<Cita> buscarCitasDashboardOdontologo(
+        @Param("usuarioId") Long usuarioId,
+        @Param("desde") LocalDateTime desde
+    );
+
+    @Query("""
+        SELECT c FROM Cita c
+        JOIN FETCH c.paciente p
+        JOIN FETCH c.estado e
+        LEFT JOIN FETCH c.servicioSolicitado s
+        JOIN FETCH c.odontologoEspecialidad oe
+        JOIN FETCH oe.odontologo o
+        JOIN FETCH o.personal per
+        JOIN FETCH c.sede sd
+        WHERE c.fechaHoraInicio >= :desde
+        ORDER BY c.fechaHoraInicio ASC
+    """)
+    List<Cita> buscarCitasDashboardRecepcion(@Param("desde") LocalDateTime desde);
 }

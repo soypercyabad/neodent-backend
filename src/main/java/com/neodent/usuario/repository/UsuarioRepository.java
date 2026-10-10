@@ -36,6 +36,15 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     """)
     long contarAdminsActivos();
 
+    @Query("""
+        SELECT COUNT(DISTINCT u)
+        FROM Usuario u
+        JOIN u.roles r
+        WHERE r.nombre = :rolNombre
+        AND u.estado.nombre = 'ACTIVO'
+    """)
+    long contarUsuariosActivosConRol(@Param("rolNombre") String rolNombre);
+
     @EntityGraph(attributePaths = {"roles", "estado"})
     @Query(
         value = """

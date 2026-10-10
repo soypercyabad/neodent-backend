@@ -321,6 +321,27 @@ public class SecurityConfig {
                     AppConstants.Roles.ADMIN
                 )
 
+                /* Dashboard analítico */
+                .requestMatchers(
+                    "/api/dashboard/admin",
+                    "/api/dashboard/admin/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+                .requestMatchers(
+                    "/api/dashboard/odontologo",
+                    "/api/dashboard/odontologo/**"
+                ).hasRole(
+                    AppConstants.Roles.ODONTOLOGO
+                )
+                .requestMatchers(
+                    "/api/dashboard/recepcion",
+                    "/api/dashboard/recepcion/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA
+                )
+
                 /* Todo lo no definido explícitamente queda bloqueado.*/
                 .anyRequest().denyAll()
             )

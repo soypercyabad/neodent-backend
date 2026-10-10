@@ -58,4 +58,8 @@ public interface PacienteRepository
         @Param("buscar") String buscar,
         Pageable pageable
     );
+
+    long countByActivoTrue();
+
+    long countByFechaCreacionGreaterThanEqual(java.time.LocalDateTime fecha);
 }

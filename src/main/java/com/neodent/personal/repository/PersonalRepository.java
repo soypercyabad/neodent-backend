@@ -20,4 +20,6 @@ public interface PersonalRepository extends JpaRepository<Personal, Long> {
     boolean existsByTipoDocumentoIdAndNumeroDocumentoIgnoreCase(Integer tipoDocumentoId, String numeroDocumento);
 
     boolean existsByTipoDocumentoIdAndNumeroDocumentoIgnoreCaseAndIdNot(Integer tipoDocumentoId, String numeroDocumento, Long id);
+
+    long countByActivoTrue();
 }
