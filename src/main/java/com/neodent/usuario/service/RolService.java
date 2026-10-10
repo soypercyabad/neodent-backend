@@ -4,7 +4,8 @@ import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.usuario.dto.request.RolRequest;
-import com.neodent.usuario.dto.response.ModuloResponse;
+import com.neodent.usuario.dto.response.RolCatalogoResponse;
+import com.neodent.usuario.dto.response.RolModuloResponse;
 import com.neodent.usuario.dto.response.RolResponse;
 import com.neodent.usuario.model.Modulo;
 import com.neodent.usuario.model.Rol;
@@ -51,6 +52,14 @@ public class RolService {
     @Transactional(readOnly = true)
     public RolResponse obtener(Integer id) {
         return toResponse(obtenerOFail(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<RolCatalogoResponse> catalogo() {
+        return rolRepository.findAllByActivoTrueOrderByNombreAsc()
+            .stream()
+            .map(r -> new RolCatalogoResponse(r.getId(), r.getNombre()))
+            .toList();
     }
 
     @Transactional
@@ -153,18 +162,14 @@ public class RolService {
     }
 
     private RolResponse toResponse(Rol rol) {
-        List<ModuloResponse> modulos = rol.getModulos() == null ? List.of() :
+        List<RolModuloResponse> modulos = rol.getModulos() == null ? List.of() :
             rol.getModulos().stream()
                 .filter(m -> Boolean.TRUE.equals(m.getActivo()))
                 .sorted(Comparator.comparingInt(Modulo::getOrden))
-                .map(m -> new ModuloResponse(
+                .map(m -> new RolModuloResponse(
                     m.getId(),
                     m.getCodigo(),
-                    m.getNombre(),
-                    m.getDescripcion(),
-                    m.getRuta(),
-                    m.getIcono(),
-                    m.getOrden()
+                    m.getNombre()
                 ))
                 .toList();
 

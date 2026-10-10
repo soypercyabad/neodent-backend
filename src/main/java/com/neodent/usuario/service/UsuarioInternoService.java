@@ -46,11 +46,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UsuarioInternoService {
 
-    private static final Set<String> ROLES_INTERNOS = Set.of(
-        AppConstants.Roles.ADMIN,
-        AppConstants.Roles.RECEPCIONISTA,
-        AppConstants.Roles.ODONTOLOGO
-    );
 
     private final UsuarioRepository usuarioRepository;
     private final EstadoUsuarioRepository estadoUsuarioRepository;
@@ -521,6 +516,10 @@ public class UsuarioInternoService {
     }
 
     private Set<String> normalizarRoles(Set<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            throw new ConflictException("Debe asignar al menos un rol al trabajador");
+        }
+
         Set<String> normalizados = new HashSet<>();
 
         for (String rol : roles) {
@@ -534,15 +533,6 @@ public class UsuarioInternoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no configurado o inactivo: " + nombre));
 
             normalizados.add(nombre);
-        }
-
-        boolean tieneRolOperativo =
-            normalizados.stream().anyMatch(ROLES_INTERNOS::contains);
-
-        if (!tieneRolOperativo) {
-            throw new ConflictException(
-                "El personal debe tener al menos un rol operativo: ADMIN, RECEPCIONISTA u ODONTOLOGO"
-            );
         }
 
         return normalizados;

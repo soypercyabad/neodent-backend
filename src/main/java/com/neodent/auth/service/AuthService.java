@@ -53,6 +53,12 @@ public class AuthService {
             throw new ForbiddenException("La cuenta aún no ha sido activada");
         }
 
+        boolean tieneRolActivo = usuario.getRoles().stream()
+            .anyMatch(rol -> Boolean.TRUE.equals(rol.getActivo()));
+        if (!tieneRolActivo) {
+            throw new ForbiddenException("Tu rol asignado se encuentra inactivo. Contacta al administrador.");
+        }
+
         boolean requires2fa = usuario.getSegundoFactor() == null || Boolean.TRUE.equals(usuario.getSegundoFactor());
         if (requires2fa) {
             OtpService.OtpGenerado otp = otpService.generarLoginOtp(usuario);

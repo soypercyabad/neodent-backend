@@ -7,5 +7,6 @@ public record ModuloResponse(
     String descripcion,
     String ruta,
     String icono,
-    Integer orden
+    Integer orden,
+    Boolean activo
 ) {}

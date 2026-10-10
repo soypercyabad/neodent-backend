@@ -8,5 +8,5 @@ public record RolResponse(
     String descripcion,
     Boolean activo,
     boolean sistema,
-    List<ModuloResponse> modulos
+    List<RolModuloResponse> modulos
 ) {}

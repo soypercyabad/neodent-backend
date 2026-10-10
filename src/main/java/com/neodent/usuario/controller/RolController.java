@@ -1,6 +1,7 @@
 package com.neodent.usuario.controller;
 
 import com.neodent.usuario.dto.request.RolRequest;
+import com.neodent.usuario.dto.response.RolCatalogoResponse;
 import com.neodent.usuario.dto.response.RolResponse;
 import com.neodent.usuario.service.RolService;
 
@@ -21,6 +22,18 @@ import java.util.List;
 @Tag(name = "Roles", description = "Operaciones de gestión de roles")
 public class RolController {
     private final RolService rolService;
+
+    @Operation(
+        summary = "Catálogo ligero de roles",
+        description = "Retorna una lista simplificada de roles (id y nombre) ideal para selectores de formularios"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Catálogo listado exitosamente")
+    })
+    @GetMapping("/catalogo")
+    public List<RolCatalogoResponse> catalogo() {
+        return rolService.catalogo();
+    }
 
     @Operation(
         summary = "Listar roles",
