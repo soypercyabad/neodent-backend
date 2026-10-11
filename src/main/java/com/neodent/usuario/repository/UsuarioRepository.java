@@ -56,7 +56,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
                 FROM Usuario u2
                 JOIN u2.roles r
                 WHERE u2.id = u.id
-                AND r.nombre IN ('ADMIN', 'RECEPCIONISTA', 'ODONTOLOGO')
+                AND r.nombre <> 'PACIENTE'
                 AND (:rol IS NULL OR r.nombre = :rol)
             )
             AND (:estado IS NULL OR u.estado.nombre = :estado)
@@ -68,7 +68,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
                     OR LOWER(p.nombres) LIKE LOWER(CONCAT('%', :buscar, '%'))
                     OR LOWER(p.apellidoPaterno) LIKE LOWER(CONCAT('%', :buscar, '%'))
                     OR LOWER(p.apellidoMaterno) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR LOWER(CONCAT(p.nombres, ' ', p.apellidoPaterno, ' ', COALESCE(p.apellidoMaterno, ''))) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR LOWER(CONCAT(p.nombres, ' ', p.apellidoPaterno)) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR LOWER(CONCAT(p.apellidoPaterno, ' ', COALESCE(p.apellidoMaterno, ''))) LIKE LOWER(CONCAT('%', :buscar, '%'))
                     OR LOWER(p.numeroDocumento) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR (p.telefono IS NOT NULL AND REPLACE(p.telefono, ' ', '') LIKE LOWER(CONCAT('%', REPLACE(:buscar, ' ', ''), '%')))
             )
             """,
         countQuery = """
@@ -80,7 +84,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
                 FROM Usuario u2
                 JOIN u2.roles r
                 WHERE u2.id = u.id
-                AND r.nombre IN ('ADMIN', 'RECEPCIONISTA', 'ODONTOLOGO')
+                AND r.nombre <> 'PACIENTE'
                 AND (:rol IS NULL OR r.nombre = :rol)
             )
             AND (:estado IS NULL OR u.estado.nombre = :estado)
@@ -92,7 +96,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
                     OR LOWER(p.nombres) LIKE LOWER(CONCAT('%', :buscar, '%'))
                     OR LOWER(p.apellidoPaterno) LIKE LOWER(CONCAT('%', :buscar, '%'))
                     OR LOWER(p.apellidoMaterno) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR LOWER(CONCAT(p.nombres, ' ', p.apellidoPaterno, ' ', COALESCE(p.apellidoMaterno, ''))) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR LOWER(CONCAT(p.nombres, ' ', p.apellidoPaterno)) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR LOWER(CONCAT(p.apellidoPaterno, ' ', COALESCE(p.apellidoMaterno, ''))) LIKE LOWER(CONCAT('%', :buscar, '%'))
                     OR LOWER(p.numeroDocumento) LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    OR (p.telefono IS NOT NULL AND REPLACE(p.telefono, ' ', '') LIKE LOWER(CONCAT('%', REPLACE(:buscar, ' ', ''), '%')))
             )
             """
     )
