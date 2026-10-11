@@ -6,6 +6,7 @@ import com.neodent.cita.dto.request.CancelarCitaRequest;
 import com.neodent.cita.dto.request.MarcarNoAsistioRequest;
 import com.neodent.cita.dto.request.ReprogramarCitaRequest;
 import com.neodent.cita.dto.response.CitaResponse;
+import com.neodent.cita.dto.response.CitaResumenResponse;
 import com.neodent.cita.dto.response.DetalleCitaResponse;
 import com.neodent.cita.dto.response.HistorialCitaResponse;
 import com.neodent.cita.model.Cita;
@@ -29,6 +30,7 @@ import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ForbiddenException;
 import com.neodent.shared.exception.ResourceNotFoundException;
+import com.neodent.shared.response.PaginaResponse;
 import com.neodent.usuario.model.Usuario;
 import com.neodent.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -894,6 +896,102 @@ public class CitaService {
 
         return citaRepository.buscarAgenda(null, null, null, inicio, fin)
             .stream().map(this::mapearDetalle).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaResponse<CitaResumenResponse> obtenerAgendaDetalladaPaginada(
+        LocalDate fecha,
+        String estado,
+        String vista,
+        Long odontologoId,
+        Long odontologoUsuarioId,
+        Integer sedeId,
+        String buscar,
+        Pageable pageable
+    ) {
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDate hoy = ahora.toLocalDate();
+        LocalDate manana = hoy.plusDays(1);
+
+        LocalDateTime inicio = null;
+        LocalDateTime fin = null;
+        List<String> estadosExcluidos = null;
+        List<String> estadosIncluidos = null;
+        String estadoFiltro = estado;
+
+        if (fecha != null) {
+            inicio = fecha.atStartOfDay();
+            fin = fecha.plusDays(1).atStartOfDay();
+        }
+
+        if (vista != null && !vista.isBlank()) {
+            switch (vista.toUpperCase().trim()) {
+                case "HOY" -> {
+                    inicio = hoy.atStartOfDay();
+                    fin = manana.atStartOfDay();
+                }
+                case "MANANA_CONFIRMAR" -> {
+                    inicio = manana.atStartOfDay();
+                    fin = manana.plusDays(1).atStartOfDay();
+                    estadoFiltro = "PROGRAMADA";
+                }
+                case "PROXIMAS" -> {
+                    inicio = ahora;
+                    estadosExcluidos = List.of("ATENDIDA", "CANCELADA", "NO_ASISTIO");
+                }
+                case "HISTORIAL" -> {
+                    estadosIncluidos = List.of("ATENDIDA", "CANCELADA", "NO_ASISTIO");
+                }
+                default -> {}
+            }
+        }
+
+        Page<Cita> pagina = citaRepository.buscarAgendaPaginada(
+            odontologoId,
+            odontologoUsuarioId,
+            estadoFiltro,
+            sedeId,
+            inicio,
+            fin,
+            estadosExcluidos,
+            estadosIncluidos,
+            buscar,
+            pageable
+        );
+
+        return PaginaResponse.de(pagina.map(this::mapearResumen));
+    }
+
+    private CitaResumenResponse mapearResumen(Cita cita) {
+        var paciente = cita.getPaciente();
+        var odontologo = cita.getOdontologoEspecialidad().getOdontologo();
+        var personal = odontologo.getPersonal();
+        var servicio = cita.getServicioSolicitado();
+        var sede = cita.getSede();
+
+        return new CitaResumenResponse(
+            cita.getId(),
+            paciente.getId(),
+            nombreCompleto(
+                paciente.getNombres(),
+                paciente.getApellidoPaterno(),
+                paciente.getApellidoMaterno()
+            ),
+            paciente.getTelefono(),
+            paciente.getNumeroDocumento(),
+            nombreCompleto(
+                personal.getNombres(),
+                personal.getApellidoPaterno(),
+                personal.getApellidoMaterno()
+            ),
+            cita.getOdontologoEspecialidad().getEspecialidad().getNombre(),
+            sede != null ? sede.getNombre() : null,
+            servicio != null ? servicio.getNombre() : "Servicio no especificado",
+            cita.getFechaHoraInicio(),
+            cita.getFechaHoraFin(),
+            servicio != null && servicio.getDuracionMinutos() != null ? servicio.getDuracionMinutos().intValue() : null,
+            cita.getEstado() != null ? cita.getEstado().getNombre() : null
+        );
     }
 
     private DetalleCitaResponse mapearDetalle(Cita cita) {

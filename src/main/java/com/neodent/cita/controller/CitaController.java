@@ -7,6 +7,7 @@ import com.neodent.cita.dto.request.LiberarReservaCitaRequest;
 import com.neodent.cita.dto.request.MarcarNoAsistioRequest;
 import com.neodent.cita.dto.request.ReprogramarCitaRequest;
 import com.neodent.cita.dto.response.CitaResponse;
+import com.neodent.cita.dto.response.CitaResumenResponse;
 import com.neodent.cita.dto.response.DetalleCitaResponse;
 import com.neodent.cita.dto.response.DisponibilidadCitaResponse;
 import com.neodent.cita.dto.response.HistorialCitaResponse;
@@ -14,6 +15,7 @@ import com.neodent.cita.dto.response.ReservaCitaResponse;
 import com.neodent.cita.service.CitaService;
 import com.neodent.cita.service.DisponibilidadCitaService;
 import com.neodent.cita.service.ReservaCitaService;
+import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.response.PaginaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -322,15 +324,52 @@ public class CitaController {
 
 
     @Operation(
-        summary = "Consultar agenda administrativa con información detallada",
-        description = "Obtiene las citas registradas con detalle completo, permitiendo filtrar por fecha."
+        summary = "Consultar agenda administrativa con información detallada y paginación",
+        description = "Obtiene las citas registradas con detalle completo, con soporte para paginación y filtros por estado, fecha, vista y texto."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Agenda obtenida correctamente")
     })
     @GetMapping("/agenda-detalle")
-    public List<DetalleCitaResponse> obtenerAgendaDetallada(@RequestParam(required = false) LocalDate fecha) {
-        return citaService.obtenerAgendaDetallada(fecha);
+    public PaginaResponse<CitaResumenResponse> obtenerAgendaDetallada(
+            @RequestParam(required = false) LocalDate fecha,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String vista,
+            @RequestParam(required = false) Long odontologoId,
+            @RequestParam(required = false) Integer sedeId,
+            @RequestParam(required = false) String buscar,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "fechaHoraInicio") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        Long odontologoUsuarioId = null;
+        if (jwt != null) {
+            List<String> roles = jwt.getClaimAsStringList("roles");
+            if (roles != null && roles.contains(AppConstants.Roles.ODONTOLOGO)
+                    && !roles.contains(AppConstants.Roles.ADMIN)
+                    && !roles.contains(AppConstants.Roles.RECEPCIONISTA)) {
+                odontologoUsuarioId = Long.valueOf(jwt.getSubject());
+            }
+        }
+
+        Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction)
+            ? Sort.Direction.ASC
+            : Sort.Direction.DESC;
+
+        String sortCampo = switch (sortBy) {
+            case "id", "idCita" -> "id";
+            case "estado" -> "estado";
+            case "fechaHoraFin" -> "fechaHoraFin";
+            default -> "fechaHoraInicio";
+        };
+
+        Pageable pageable = PageRequest.of(page, Math.max(1, Math.min(size, 100)), Sort.by(sortDirection, sortCampo));
+
+        return citaService.obtenerAgendaDetalladaPaginada(
+            fecha, estado, vista, odontologoId, odontologoUsuarioId, sedeId, buscar, pageable
+        );
     }
 
 

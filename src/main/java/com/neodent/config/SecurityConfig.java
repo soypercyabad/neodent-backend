@@ -207,7 +207,8 @@ public class SecurityConfig {
                     "/api/citas/agenda-detalle"
                 ).hasAnyRole(
                     AppConstants.Roles.ADMIN,
-                    AppConstants.Roles.RECEPCIONISTA
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO
                 )
 
                 /* Cualquier otra operación de citas queda para Administración/Recepción.*/
