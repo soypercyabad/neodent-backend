@@ -1,6 +1,7 @@
 package com.neodent.sede.service;
 
 import com.neodent.sede.dto.request.SedeRequest;
+import com.neodent.sede.dto.response.SedeCatalogoResponse;
 import com.neodent.sede.dto.response.SedeResponse;
 import com.neodent.sede.model.Sede;
 import com.neodent.sede.repository.SedeRepository;
@@ -17,6 +18,14 @@ import java.util.List;
 public class SedeService {
 
     private final SedeRepository repository;
+
+    @Transactional(readOnly = true)
+    public List<SedeCatalogoResponse> catalogo() {
+        return repository.findByActivoTrueOrderByNombreAsc()
+            .stream()
+            .map(s -> new SedeCatalogoResponse(s.getId(), s.getNombre(), s.getDistrito()))
+            .toList();
+    }
 
     @Transactional(readOnly = true)
     public List<SedeResponse> listar() {

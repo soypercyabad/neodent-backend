@@ -1,5 +1,6 @@
 package com.neodent.paciente.dto;
 
+import com.neodent.paciente.model.OrigenRegistro;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -50,7 +51,26 @@ public record CrearPacienteRequest(
 
     @Schema(description = "Dirección", example = "Av. Grau 250, Piura")
     @Size(max = 255)
-    String direccion
+    String direccion,
+
+    @Schema(description = "ID de la sede donde se registra el paciente", example = "1")
+    Integer sedeId,
+
+    @Schema(description = "Canal u origen de registro", example = "RECEPCION")
+    OrigenRegistro origenRegistro
 
 ) {
+    public CrearPacienteRequest(
+        String tipoDocumento,
+        String numeroDocumento,
+        String nombres,
+        String apellidoPaterno,
+        String apellidoMaterno,
+        LocalDate fechaNacimiento,
+        String telefono,
+        String email,
+        String direccion
+    ) {
+        this(tipoDocumento, numeroDocumento, nombres, apellidoPaterno, apellidoMaterno, fechaNacimiento, telefono, email, direccion, null, null);
+    }
 }

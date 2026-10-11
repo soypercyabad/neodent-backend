@@ -61,6 +61,14 @@ public class Paciente {
     @JoinColumn(name = "id_usuario", unique = true)
     private Usuario usuario;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origen_registro", length = 30)
+    private OrigenRegistro origenRegistro;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_sede_registro")
+    private com.neodent.sede.model.Sede sedeRegistro;
+
     @Column(name = "activo", nullable = false)
     private Boolean activo;
 

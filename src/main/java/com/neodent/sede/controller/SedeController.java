@@ -1,6 +1,7 @@
 package com.neodent.sede.controller;
 
 import com.neodent.sede.dto.request.SedeRequest;
+import com.neodent.sede.dto.response.SedeCatalogoResponse;
 import com.neodent.sede.dto.response.SedeResponse;
 import com.neodent.sede.service.SedeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,7 +27,17 @@ public class SedeController {
 
     public record EstadoRequest(@NotNull(message = "El estado es obligatorio") Boolean activo) {}
 
-
+    @Operation(
+        summary = "Catálogo ligero de sedes activas",
+        description = "Retorna una lista simplificada de sedes activas (id, nombre, distrito) ideal para selectores de formularios"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Catálogo de sedes listado exitosamente")
+    })
+    @GetMapping("/catalogo")
+    public List<SedeCatalogoResponse> catalogo() {
+        return service.catalogo();
+    }
 
     @Operation(
         summary = "Listar sedes",

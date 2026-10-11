@@ -3,11 +3,15 @@ package com.neodent.paciente.service;
 import com.neodent.paciente.dto.ActualizarPacienteRequest;
 import com.neodent.paciente.dto.CrearPacienteRequest;
 import com.neodent.paciente.dto.PacienteResponse;
+import com.neodent.paciente.dto.PacienteResumenResponse;
 import com.neodent.paciente.mapper.PacienteMapper;
+import com.neodent.paciente.model.OrigenRegistro;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.paciente.model.TipoDocumento;
 import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.paciente.repository.TipoDocumentoRepository;
+import com.neodent.sede.model.Sede;
+import com.neodent.sede.repository.SedeRepository;
 import com.neodent.shared.constants.AppConstants;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
@@ -31,6 +35,7 @@ public class PacienteService {
     private final PacienteMapper pacienteMapper;
     private final UsuarioRepository usuarioRepository;
     private final EstadoUsuarioRepository estadoUsuarioRepository;
+    private final SedeRepository sedeRepository;
 
     @Transactional(readOnly = true)
     public PacienteResponse buscarPorDocumento(String tipoDocumento, String numeroDocumento) {
@@ -76,6 +81,15 @@ public class PacienteService {
         paciente.setUsuario(null);
         paciente.setActivo(true);
 
+        OrigenRegistro origen = request.origenRegistro() != null ? request.origenRegistro() : OrigenRegistro.RECEPCION;
+        paciente.setOrigenRegistro(origen);
+
+        if (request.sedeId() != null) {
+            Sede sede = sedeRepository.findById(request.sedeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada"));
+            paciente.setSedeRegistro(sede);
+        }
+
         Paciente guardado = pacienteRepository.save(paciente);
         return pacienteMapper.toResponse(guardado);
     }
@@ -111,6 +125,12 @@ public class PacienteService {
         paciente.setTelefono(telefono);
         paciente.setCorreo(email);
         paciente.setDireccion(normalizarTextoOpcional(request.direccion()));
+
+        if (request.sedeId() != null) {
+            Sede sede = sedeRepository.findById(request.sedeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sede no encontrada"));
+            paciente.setSedeRegistro(sede);
+        }
 
         if (usuario != null && cambioEmail) {
             usuario.setCorreo(email);
@@ -180,6 +200,14 @@ public class PacienteService {
         paciente.setUsuario(usuario);
         paciente.setActivo(true);
 
+        OrigenRegistro origen = request.origenRegistro() != null ? request.origenRegistro() : OrigenRegistro.AUTORREGISTRO;
+        paciente.setOrigenRegistro(origen);
+
+        if (request.sedeId() != null) {
+            Sede sede = sedeRepository.findById(request.sedeId()).orElse(null);
+            paciente.setSedeRegistro(sede);
+        }
+
         return pacienteRepository.save(paciente);
     }
 
@@ -233,9 +261,11 @@ public class PacienteService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PacienteResponse> listar(
+    public Page<PacienteResumenResponse> listar(
         Boolean activo,
         Boolean conCuenta,
+        OrigenRegistro origen,
+        Integer sedeId,
         String buscar,
         Pageable pageable
     ) {
@@ -247,8 +277,10 @@ public class PacienteService {
         return pacienteRepository.buscarPacientes(
             activo,
             conCuenta,
+            origen,
+            sedeId,
             buscarNormalizado,
             pageable
-        ).map(pacienteMapper::toResponse);
+        ).map(pacienteMapper::toResumenResponse);
     }
 }

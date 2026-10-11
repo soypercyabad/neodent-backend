@@ -1,5 +1,7 @@
 package com.neodent.paciente.dto;
 
+import com.neodent.paciente.model.OrigenRegistro;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -19,6 +21,9 @@ public record PacienteResponse(
     boolean tieneCuenta,
     String estadoCuenta,
     Boolean correoVerificado,
+    OrigenRegistro origenRegistro,
+    Integer sedeRegistroId,
+    String sedeRegistroNombre,
     LocalDateTime fechaCreacion,
     LocalDateTime fechaActualizacion
 ) {}

@@ -295,6 +295,17 @@ public class SecurityConfig {
                     AppConstants.Roles.ADMIN
                 )
 
+                /* Catálogo ligero de sedes activas para formularios y selectores */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/sedes/catalogo"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
+                )
+
                 /* Administración de sedes: únicamente ADMIN. */
                 .requestMatchers(
                     "/api/sedes",

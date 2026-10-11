@@ -1,5 +1,6 @@
 package com.neodent.paciente.repository;
 
+import com.neodent.paciente.model.OrigenRegistro;
 import com.neodent.paciente.model.Paciente;
 
 import org.springframework.data.domain.Page;
@@ -15,13 +16,13 @@ public interface PacienteRepository
         extends JpaRepository<Paciente, Long> {
 
     @Override
-    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado", "sedeRegistro"})
     Optional<Paciente> findById(Long id);
 
-    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado", "sedeRegistro"})
     Optional<Paciente> findByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
 
-    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado", "sedeRegistro"})
     Optional<Paciente> findByUsuarioIdAndActivoTrue(Long usuarioId);
 
     boolean existsByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
@@ -34,7 +35,7 @@ public interface PacienteRepository
 
     boolean existsByTelefonoAndIdNot(String telefono, Long id);
 
-    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado"})
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado", "sedeRegistro"})
     @Query("""
         SELECT p
         FROM Paciente p
@@ -43,10 +44,20 @@ public interface PacienteRepository
             (:conCuenta = true AND p.usuario IS NOT NULL) OR
             (:conCuenta = false AND p.usuario IS NULL))
         AND (
+            :origen IS NULL
+            OR p.origenRegistro = :origen
+            OR (p.origenRegistro IS NULL AND (
+                (:origen = com.neodent.paciente.model.OrigenRegistro.AUTORREGISTRO AND p.usuario IS NOT NULL) OR
+                (:origen = com.neodent.paciente.model.OrigenRegistro.RECEPCION AND p.usuario IS NULL)
+            ))
+        )
+        AND (:sedeId IS NULL OR (p.sedeRegistro IS NOT NULL AND p.sedeRegistro.id = :sedeId))
+        AND (
             :buscar IS NULL
             OR LOWER(p.nombres) LIKE LOWER(CONCAT('%', :buscar, '%'))
             OR LOWER(p.apellidoPaterno) LIKE LOWER(CONCAT('%', :buscar, '%'))
             OR LOWER(p.apellidoMaterno) LIKE LOWER(CONCAT('%', :buscar, '%'))
+            OR LOWER(CONCAT(p.nombres, ' ', p.apellidoPaterno, ' ', COALESCE(p.apellidoMaterno, ''))) LIKE LOWER(CONCAT('%', :buscar, '%'))
             OR LOWER(p.numeroDocumento) LIKE LOWER(CONCAT('%', :buscar, '%'))
             OR LOWER(p.correo) LIKE LOWER(CONCAT('%', :buscar, '%'))
             OR LOWER(p.telefono) LIKE LOWER(CONCAT('%', :buscar, '%'))
@@ -55,6 +66,8 @@ public interface PacienteRepository
     Page<Paciente> buscarPacientes(
         @Param("activo") Boolean activo,
         @Param("conCuenta") Boolean conCuenta,
+        @Param("origen") OrigenRegistro origen,
+        @Param("sedeId") Integer sedeId,
         @Param("buscar") String buscar,
         Pageable pageable
     );

@@ -4,6 +4,7 @@ import com.neodent.auth.service.AccountInvitationService;
 import com.neodent.paciente.dto.ActualizarPacienteRequest;
 import com.neodent.paciente.dto.CrearPacienteRequest;
 import com.neodent.paciente.dto.PacienteResponse;
+import com.neodent.paciente.dto.PacienteResumenResponse;
 import com.neodent.paciente.service.PacienteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -172,15 +173,17 @@ public class PacienteController {
 
     @Operation(
         summary = "Listar pacientes", 
-        description = "Lista pacientes con paginación y filtros por estado, existencia de cuenta y búsqueda general."
+        description = "Lista pacientes con paginación y filtros por estado, existencia de cuenta, canal/origen de registro, sede y búsqueda general."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Pacientes listados correctamente")
     })
     @GetMapping
-    public PaginaResponse<PacienteResponse> listar(
+    public PaginaResponse<PacienteResumenResponse> listar(
             @RequestParam(required = false) Boolean activo,
             @RequestParam(required = false) Boolean conCuenta,
+            @RequestParam(required = false) com.neodent.paciente.model.OrigenRegistro origen,
+            @RequestParam(required = false) Integer sedeId,
             @RequestParam(required = false) String buscar,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -191,7 +194,8 @@ public class PacienteController {
                 "nombres",
                 "apellidoPaterno",
                 "numeroDocumento",
-                "fechaCreacion");
+                "fechaCreacion",
+                "origenRegistro");
 
         if (!camposOrdenPermitidos.contains(sortBy)) {
             sortBy = "id";
@@ -206,9 +210,11 @@ public class PacienteController {
                 size,
                 Sort.by(sortDirection, sortBy));
 
-        Page<PacienteResponse> resultado = pacienteService.listar(
+        Page<PacienteResumenResponse> resultado = pacienteService.listar(
                 activo,
                 conCuenta,
+                origen,
+                sedeId,
                 buscar,
                 pageable);
 
