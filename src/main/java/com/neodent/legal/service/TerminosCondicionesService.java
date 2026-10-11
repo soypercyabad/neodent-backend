@@ -190,7 +190,7 @@ public class TerminosCondicionesService {
             String correo = a.getUsuario().getCorreo();
 
             String nombreCompleto = "Usuario #" + usuarioId;
-            String numeroDoc = "—";
+            String numeroDoc = "-";
 
             Optional<Paciente> pacienteOpt = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId);
             if (pacienteOpt.isPresent()) {
