@@ -71,9 +71,9 @@ public class SedeService {
 
     @Transactional(readOnly = true)
     public List<SedeCatalogoResponse> catalogo() {
-        return repository.findByActivoTrueOrderByNombreAsc()
+        return repository.findAll(Sort.by("nombre").ascending())
             .stream()
-            .map(s -> new SedeCatalogoResponse(s.getId(), s.getNombre(), s.getDistrito()))
+            .map(s -> new SedeCatalogoResponse(s.getId(), s.getNombre(), s.getDistrito(), s.getActivo()))
             .toList();
     }
 

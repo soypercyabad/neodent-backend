@@ -9,10 +9,14 @@ import com.neodent.servicio.model.Servicio;
 import com.neodent.servicio.model.ServicioSede;
 import com.neodent.servicio.repository.ServicioRepository;
 import com.neodent.servicio.repository.ServicioSedeRepository;
+import com.neodent.servicio.dto.response.ServicioResumenEstadosResponse;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +38,55 @@ public class ServicioService {
     public List<ServicioResponse> listar() {
         return repository.findAll(Sort.by("nombre").ascending())
             .stream().map(this::mapear).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServicioResponse> listarPaginado(
+        String buscar,
+        Integer especialidadId,
+        Integer sedeId,
+        Boolean activo,
+        Boolean destacado,
+        int page,
+        int size,
+        String sortBy,
+        String direction
+    ) {
+        String campoOrden = "nombre";
+        if (sortBy != null && !sortBy.isBlank()) {
+            campoOrden = switch (sortBy.trim()) {
+                case "precio", "precioReferencial" -> "precioReferencial";
+                case "duracion", "duracionMinutos" -> "duracionMinutos";
+                case "activo" -> "activo";
+                case "destacado" -> "destacado";
+                default -> "nombre";
+            };
+        }
+
+        Sort.Direction dir = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by(dir, campoOrden));
+
+        String queryBuscar = (buscar != null && !buscar.isBlank()) ? buscar.trim() : null;
+        Page<Servicio> pagina = repository.buscarPaginado(queryBuscar, especialidadId, sedeId, activo, destacado, pageable);
+
+        return pagina.map(this::mapear);
+    }
+
+    @Transactional(readOnly = true)
+    public ServicioResumenEstadosResponse resumenEstados(String buscar, Integer especialidadId, Integer sedeId) {
+        String queryBuscar = (buscar != null && !buscar.isBlank()) ? buscar.trim() : null;
+        List<Object[]> filas = repository.contarPorEstados(queryBuscar, especialidadId, sedeId);
+
+        if (filas != null && !filas.isEmpty()) {
+            Object[] counts = filas.get(0);
+            long todos = counts[0] != null ? ((Number) counts[0]).longValue() : 0L;
+            long destacados = counts[1] != null ? ((Number) counts[1]).longValue() : 0L;
+            long activos = counts[2] != null ? ((Number) counts[2]).longValue() : 0L;
+            long inactivos = counts[3] != null ? ((Number) counts[3]).longValue() : 0L;
+            return new ServicioResumenEstadosResponse(todos, destacados, activos, inactivos);
+        }
+
+        return new ServicioResumenEstadosResponse(0, 0, 0, 0);
     }
 
     @Transactional(readOnly = true)

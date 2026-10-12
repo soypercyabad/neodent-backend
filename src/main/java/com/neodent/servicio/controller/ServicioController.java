@@ -2,7 +2,9 @@ package com.neodent.servicio.controller;
 
 import com.neodent.servicio.dto.request.ServicioRequest;
 import com.neodent.servicio.dto.response.ServicioResponse;
+import com.neodent.servicio.dto.response.ServicioResumenEstadosResponse;
 import com.neodent.servicio.service.ServicioService;
+import com.neodent.shared.response.PaginaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -28,17 +30,40 @@ public class ServicioController {
         @NotNull(message = "El estado es obligatorio") Boolean activo
     ) {}
 
-
+    @Operation(summary = "Resumen de conteos de servicios por estado", description = "Retorna el total de servicios, destacados, activos e inactivos")
+    @GetMapping("/resumen-estados")
+    public ServicioResumenEstadosResponse resumenEstados(
+        @RequestParam(required = false) String buscar,
+        @RequestParam(required = false) Integer especialidadId,
+        @RequestParam(required = false) Integer sedeId
+    ) {
+        return service.resumenEstados(buscar, especialidadId, sedeId);
+    }
 
     @Operation(
         summary = "Listar servicios",
-        description = "Retorna todos los servicios odontológicos registrados"
+        description = "Retorna todos los servicios odontológicos registrados. Si se envía 'page', retorna PaginaResponse; si no, retorna la lista completa para compatibilidad."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Servicios listados exitosamente")
     })
     @GetMapping
-    public List<ServicioResponse> listar() {
+    public Object listar(
+        @RequestParam(required = false) String buscar,
+        @RequestParam(required = false) Integer especialidadId,
+        @RequestParam(required = false) Integer sedeId,
+        @RequestParam(required = false) Boolean activo,
+        @RequestParam(required = false) Boolean destacado,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String sortBy,
+        @RequestParam(defaultValue = "asc") String direction
+    ) {
+        if (page != null) {
+            return PaginaResponse.de(
+                service.listarPaginado(buscar, especialidadId, sedeId, activo, destacado, page, size, sortBy, direction)
+            );
+        }
         return service.listar();
     }
 
