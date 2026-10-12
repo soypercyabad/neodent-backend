@@ -739,6 +739,32 @@ public class PatientRegistrationService {
                             LocalDateTime.now()
                         );
 
+                        try {
+                            org.springframework.web.context.request.RequestAttributes attrs =
+                                org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+                            if (attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra) {
+                                jakarta.servlet.http.HttpServletRequest req = sra.getRequest();
+                                String ip = req.getHeader("X-Forwarded-For");
+                                if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                                    ip = req.getHeader("X-Real-IP");
+                                }
+                                if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                                    ip = req.getRemoteAddr();
+                                } else if (ip.contains(",")) {
+                                    ip = ip.split(",")[0].trim();
+                                }
+                                aceptacion.setIp(ip);
+
+                                String ua = req.getHeader("User-Agent");
+                                if (ua != null && ua.length() > 255) {
+                                    ua = ua.substring(0, 255);
+                                }
+                                aceptacion.setAgenteUsuario(ua);
+                            }
+                        } catch (Exception exReq) {
+                            log.debug("No se pudo obtener IP o User-Agent en registro: {}", exReq.getMessage());
+                        }
+
                         aceptacionTerminosRepository
                             .save(aceptacion);
                     }

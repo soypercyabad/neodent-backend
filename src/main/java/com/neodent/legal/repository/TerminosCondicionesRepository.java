@@ -23,4 +23,24 @@ public interface TerminosCondicionesRepository extends JpaRepository<TerminosCon
     void desactivarTodos();
 
     boolean existsByVersion(String version);
+
+    @Query(value = """
+        SELECT t FROM TerminosCondiciones t
+        WHERE (:buscar IS NULL OR :buscar = '' OR
+               LOWER(t.titulo) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
+               LOWER(t.version) LIKE LOWER(CONCAT('%', :buscar, '%')))
+          AND (:activo IS NULL OR t.vigente = :activo)
+    """,
+    countQuery = """
+        SELECT COUNT(t) FROM TerminosCondiciones t
+        WHERE (:buscar IS NULL OR :buscar = '' OR
+               LOWER(t.titulo) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
+               LOWER(t.version) LIKE LOWER(CONCAT('%', :buscar, '%')))
+          AND (:activo IS NULL OR t.vigente = :activo)
+    """)
+    org.springframework.data.domain.Page<TerminosCondiciones> buscarPaginado(
+        @org.springframework.data.repository.query.Param("buscar") String buscar,
+        @org.springframework.data.repository.query.Param("activo") Boolean activo,
+        org.springframework.data.domain.Pageable pageable
+    );
 }

@@ -15,6 +15,10 @@ import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,6 +51,13 @@ public class TerminosCondicionesService {
         return repository.findAllByOrderByFechaCreacionDesc().stream()
             .map(this::mapearResponse)
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TerminosCondicionesResponse> listarVersionesPaginado(String buscar, Boolean activo, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "fechaCreacion"));
+        return repository.buscarPaginado(buscar, activo, pageable)
+            .map(this::mapearResponse);
     }
 
     @Transactional
@@ -184,49 +195,59 @@ public class TerminosCondicionesService {
 
     @Transactional(readOnly = true)
     public List<AceptacionTerminosResponse> listarAceptaciones() {
-        List<AceptacionTerminos> lista = aceptacionRepository.findAllWithUsuarioAndTerminos();
-        return lista.stream().map(a -> {
-            Long usuarioId = a.getUsuario().getId();
-            String correo = a.getUsuario().getCorreo();
+        return aceptacionRepository.findAllWithUsuarioAndTerminos().stream()
+            .map(this::mapearAceptacion)
+            .toList();
+    }
 
-            String nombreCompleto = "Usuario #" + usuarioId;
-            String numeroDoc = "-";
+    @Transactional(readOnly = true)
+    public Page<AceptacionTerminosResponse> listarAceptacionesPaginado(String buscar, String version, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "aceptadoEn"));
+        return aceptacionRepository.buscarPaginado(buscar, version, pageable)
+            .map(this::mapearAceptacion);
+    }
 
-            Optional<Paciente> pacienteOpt = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId);
-            if (pacienteOpt.isPresent()) {
-                Paciente p = pacienteOpt.get();
+    private AceptacionTerminosResponse mapearAceptacion(AceptacionTerminos a) {
+        Long usuarioId = a.getUsuario().getId();
+        String correo = a.getUsuario().getCorreo();
+
+        String nombreCompleto = "Usuario #" + usuarioId;
+        String numeroDoc = "-";
+
+        Optional<Paciente> pacienteOpt = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId);
+        if (pacienteOpt.isPresent()) {
+            Paciente p = pacienteOpt.get();
+            nombreCompleto = String.format("%s %s %s",
+                p.getNombres(),
+                p.getApellidoPaterno(),
+                p.getApellidoMaterno() != null ? p.getApellidoMaterno() : ""
+            ).trim();
+            numeroDoc = p.getNumeroDocumento();
+        } else {
+            Optional<Personal> personalOpt = personalRepository.findByUsuarioId(usuarioId);
+            if (personalOpt.isPresent()) {
+                Personal pers = personalOpt.get();
                 nombreCompleto = String.format("%s %s %s",
-                    p.getNombres(),
-                    p.getApellidoPaterno(),
-                    p.getApellidoMaterno() != null ? p.getApellidoMaterno() : ""
+                    pers.getNombres(),
+                    pers.getApellidoPaterno(),
+                    pers.getApellidoMaterno() != null ? pers.getApellidoMaterno() : ""
                 ).trim();
-                numeroDoc = p.getNumeroDocumento();
-            } else {
-                Optional<Personal> personalOpt = personalRepository.findByUsuarioId(usuarioId);
-                if (personalOpt.isPresent()) {
-                    Personal pers = personalOpt.get();
-                    nombreCompleto = String.format("%s %s %s",
-                        pers.getNombres(),
-                        pers.getApellidoPaterno(),
-                        pers.getApellidoMaterno() != null ? pers.getApellidoMaterno() : ""
-                    ).trim();
-                    numeroDoc = pers.getNumeroDocumento();
-                }
+                numeroDoc = pers.getNumeroDocumento();
             }
+        }
 
-            return new AceptacionTerminosResponse(
-                a.getId(),
-                usuarioId,
-                correo,
-                nombreCompleto,
-                numeroDoc,
-                a.getTerminos().getVersion(),
-                a.getTerminos().getTitulo(),
-                a.getAceptadoEn(),
-                a.getIp(),
-                a.getAgenteUsuario()
-            );
-        }).toList();
+        return new AceptacionTerminosResponse(
+            a.getId(),
+            usuarioId,
+            correo,
+            nombreCompleto,
+            numeroDoc,
+            a.getTerminos().getVersion(),
+            a.getTerminos().getTitulo(),
+            a.getAceptadoEn(),
+            a.getIp(),
+            a.getAgenteUsuario()
+        );
     }
 
     @Transactional(readOnly = true)

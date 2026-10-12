@@ -66,10 +66,19 @@ public class TerminosCondicionesController {
 
     @Operation(
         summary = "Listar todas las versiones de términos y condiciones (Admin)",
-        description = "Devuelve el listado completo de documentos cargados en el sistema con su estado de activación."
+        description = "Devuelve el listado de documentos cargados en el sistema. Si se envía 'page', retorna PaginaResponse; si no, la lista completa."
     )
     @GetMapping("/admin")
-    public ResponseEntity<List<TerminosCondicionesResponse>> listarVersiones() {
+    public ResponseEntity<?> listarVersiones(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size,
+            @RequestParam(required = false) String buscar,
+            @RequestParam(required = false) Boolean activo) {
+        if (page != null) {
+            return ResponseEntity.ok(com.neodent.shared.response.PaginaResponse.de(
+                terminosService.listarVersionesPaginado(buscar, activo, page, size)
+            ));
+        }
         return ResponseEntity.ok(terminosService.listarTodos());
     }
 
@@ -144,10 +153,19 @@ public class TerminosCondicionesController {
 
     @Operation(
         summary = "Listar personas que aceptaron los términos y condiciones (Admin)",
-        description = "Devuelve el registro de auditoría de todas las personas que aceptaron los términos."
+        description = "Devuelve el registro de auditoría de todas las personas que aceptaron los términos. Si se envía 'page', retorna PaginaResponse; si no, la lista completa."
     )
     @GetMapping("/admin/aceptaciones")
-    public ResponseEntity<List<AceptacionTerminosResponse>> listarAceptaciones() {
+    public ResponseEntity<?> listarAceptaciones(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size,
+            @RequestParam(required = false) String buscar,
+            @RequestParam(required = false) String version) {
+        if (page != null) {
+            return ResponseEntity.ok(com.neodent.shared.response.PaginaResponse.de(
+                terminosService.listarAceptacionesPaginado(buscar, version, page, size)
+            ));
+        }
         return ResponseEntity.ok(terminosService.listarAceptaciones());
     }
 }
