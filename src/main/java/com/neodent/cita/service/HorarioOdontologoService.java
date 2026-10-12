@@ -4,6 +4,7 @@ import com.neodent.cita.dto.request.ActualizarHorarioOdontologoRequest;
 import com.neodent.cita.dto.request.CrearHorarioOdontologoRequest;
 import com.neodent.cita.dto.response.HorarioOdontologoCatalogoResponse;
 import com.neodent.cita.dto.response.HorarioOdontologoResponse;
+import com.neodent.cita.dto.response.HorarioResumenEstadosResponse;
 import com.neodent.cita.model.HorarioOdontologo;
 import com.neodent.cita.repository.HorarioOdontologoRepository;
 import com.neodent.especialidad.model.OdontologoEspecialidad;
@@ -16,6 +17,9 @@ import com.neodent.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -170,13 +174,114 @@ public class HorarioOdontologoService {
 
     @Transactional(readOnly = true)
     public List<HorarioOdontologoResponse> listar(Long odontologoEspecialidadId) {
-        List<HorarioOdontologo> horarios = odontologoEspecialidadId == null
-            ? horarioRepository.findByActivoTrueOrderByDiaSemanaAscHoraInicioAsc()
-            : horarioRepository.findByOdontologoEspecialidadIdAndActivoTrueOrderByDiaSemanaAscHoraInicioAsc(
+        return listar(odontologoEspecialidadId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<HorarioOdontologoResponse> listar(Long odontologoEspecialidadId, Long odontologoId) {
+        List<HorarioOdontologo> horarios;
+        if (odontologoEspecialidadId != null) {
+            horarios = horarioRepository.findByOdontologoEspecialidadIdAndActivoTrueOrderByDiaSemanaAscHoraInicioAsc(
                 odontologoEspecialidadId
             );
+        } else if (odontologoId != null) {
+            horarios = horarioRepository.findByOdontologoEspecialidadOdontologoIdAndActivoTrueOrderByDiaSemanaAscHoraInicioAsc(
+                odontologoId
+            );
+        } else {
+            horarios = horarioRepository.findByActivoTrueOrderByDiaSemanaAscHoraInicioAsc();
+        }
 
         return horarios.stream().map(this::mapear).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<HorarioOdontologoResponse> listarPaginado(
+        Long odontologoEspecialidadId,
+        Long odontologoId,
+        Integer especialidadId,
+        Integer sedeId,
+        Byte diaSemana,
+        String estado,
+        String buscar,
+        int page,
+        int size,
+        String sortBy,
+        String direction
+    ) {
+        String estadoNormalizado = null;
+        if (estado != null && !estado.isBlank()) {
+            String e = estado.trim().toUpperCase();
+            if (e.startsWith("VIGENTE")) {
+                estadoNormalizado = "VIGENTE";
+            } else if (e.startsWith("PROXIMO")) {
+                estadoNormalizado = "PROXIMO";
+            } else if (e.startsWith("EXPIRADO") || e.startsWith("PASADO")) {
+                estadoNormalizado = "EXPIRADO";
+            } else {
+                estadoNormalizado = e;
+            }
+        }
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+
+        String campoOrden = switch (sortBy != null ? sortBy.toLowerCase() : "id") {
+            case "odontologo" -> "odontologoEspecialidad.odontologo.personal.nombres";
+            case "especialidad" -> "odontologoEspecialidad.especialidad.nombre";
+            case "sede" -> "sede.nombre";
+            case "diasemana" -> "diaSemana";
+            case "horainicio" -> "horaInicio";
+            case "fechainiciovigencia" -> "fechaInicioVigencia";
+            default -> "id";
+        };
+
+        Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction)
+            ? Sort.Direction.ASC
+            : Sort.Direction.DESC;
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(sortDirection, campoOrden));
+
+        return horarioRepository.buscarPaginado(
+            odontologoEspecialidadId,
+            odontologoId,
+            especialidadId,
+            sedeId,
+            diaSemana,
+            estadoNormalizado,
+            buscarNormalizado,
+            pageable
+        ).map(this::mapear);
+    }
+
+    @Transactional(readOnly = true)
+    public HorarioResumenEstadosResponse resumenEstados(
+        Long odontologoEspecialidadId,
+        Long odontologoId,
+        Integer especialidadId,
+        Integer sedeId,
+        Byte diaSemana,
+        String buscar
+    ) {
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+        List<Object[]> resultados = horarioRepository.contarPorEstados(
+            odontologoEspecialidadId,
+            odontologoId,
+            especialidadId,
+            sedeId,
+            diaSemana,
+            buscarNormalizado
+        );
+
+        if (resultados.isEmpty() || resultados.get(0) == null) {
+            return new HorarioResumenEstadosResponse(0L, 0L, 0L, 0L);
+        }
+
+        Object[] fila = resultados.get(0);
+        long todos = fila[0] instanceof Number n ? n.longValue() : 0L;
+        long vigentes = fila[1] instanceof Number n ? n.longValue() : 0L;
+        long proximos = fila[2] instanceof Number n ? n.longValue() : 0L;
+        long expirados = fila[3] instanceof Number n ? n.longValue() : 0L;
+
+        return new HorarioResumenEstadosResponse(todos, vigentes, proximos, expirados);
     }
 
     private void validarHoras(LocalTime inicio, LocalTime fin) {

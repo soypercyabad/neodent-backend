@@ -2,9 +2,11 @@ package com.neodent.cita.controller;
 
 import com.neodent.cita.dto.request.ActualizarHorarioOdontologoRequest;
 import com.neodent.cita.dto.request.CrearHorarioOdontologoRequest;
-import com.neodent.cita.dto.response.HorarioOdontologoResponse;
 import com.neodent.cita.dto.response.HorarioOdontologoCatalogoResponse;
+import com.neodent.cita.dto.response.HorarioOdontologoResponse;
+import com.neodent.cita.dto.response.HorarioResumenEstadosResponse;
 import com.neodent.cita.service.HorarioOdontologoService;
+import com.neodent.shared.response.PaginaResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -12,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,17 +32,73 @@ public class HorarioOdontologoController {
 
     @Operation(
         summary = "Listar horarios de odontólogo",
-        description = "Retorna todos los horarios de atención de un odontólogo"
+        description = "Retorna horarios de atención con soporte de paginación o listado completo"
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Horarios obtenidos correctamente"),
         @ApiResponse(responseCode = "401", description = "No autorizado")
     })
     @GetMapping
-    public List<HorarioOdontologoResponse> listar(
-        @RequestParam(required = false) Long odontologoEspecialidadId
+    public ResponseEntity<?> listar(
+        @RequestParam(required = false) Long odontologoEspecialidadId,
+        @RequestParam(required = false) Long odontologoId,
+        @RequestParam(required = false) Integer especialidadId,
+        @RequestParam(required = false) Integer sedeId,
+        @RequestParam(required = false) Byte diaSemana,
+        @RequestParam(required = false) String estado,
+        @RequestParam(required = false) String buscar,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "desc") String direction
     ) {
-        return horarioService.listar(odontologoEspecialidadId);
+        if (page != null) {
+            Page<HorarioOdontologoResponse> resultado = horarioService.listarPaginado(
+                odontologoEspecialidadId,
+                odontologoId,
+                especialidadId,
+                sedeId,
+                diaSemana,
+                estado,
+                buscar,
+                page,
+                size,
+                sortBy,
+                direction
+            );
+            return ResponseEntity.ok(PaginaResponse.de(resultado));
+        }
+
+        return ResponseEntity.ok(horarioService.listar(odontologoEspecialidadId, odontologoId));
+    }
+
+
+
+    @Operation(
+        summary = "Resumen de conteos por estado de horarios",
+        description = "Retorna el conteo total, vigentes, próximos y expirados según los filtros activos"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Resumen obtenido correctamente"),
+        @ApiResponse(responseCode = "401", description = "No autorizado")
+    })
+    @GetMapping("/resumen-estados")
+    public HorarioResumenEstadosResponse resumenEstados(
+        @RequestParam(required = false) Long odontologoEspecialidadId,
+        @RequestParam(required = false) Long odontologoId,
+        @RequestParam(required = false) Integer especialidadId,
+        @RequestParam(required = false) Integer sedeId,
+        @RequestParam(required = false) Byte diaSemana,
+        @RequestParam(required = false) String buscar
+    ) {
+        return horarioService.resumenEstados(
+            odontologoEspecialidadId,
+            odontologoId,
+            especialidadId,
+            sedeId,
+            diaSemana,
+            buscar
+        );
     }
 
 
