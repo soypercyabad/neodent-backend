@@ -1,7 +1,9 @@
 package com.neodent.usuario.controller;
 
+import com.neodent.shared.response.PaginaResponse;
 import com.neodent.usuario.dto.request.RolRequest;
 import com.neodent.usuario.dto.response.RolCatalogoResponse;
+import com.neodent.usuario.dto.response.RolResumenEstadosResponse;
 import com.neodent.usuario.dto.response.RolResponse;
 import com.neodent.usuario.service.RolService;
 
@@ -24,6 +26,15 @@ public class RolController {
     private final RolService rolService;
 
     @Operation(
+        summary = "Resumen de conteos de roles por estado y tipo",
+        description = "Retorna el conteo agregado de roles (todos, activos, inactivos, sistema, personalizados)"
+    )
+    @GetMapping("/resumen-estados")
+    public RolResumenEstadosResponse resumenEstados(@RequestParam(required = false) String buscar) {
+        return rolService.resumenEstados(buscar);
+    }
+
+    @Operation(
         summary = "Catálogo ligero de roles",
         description = "Retorna una lista simplificada de roles (id y nombre) ideal para selectores de formularios"
     )
@@ -37,13 +48,26 @@ public class RolController {
 
     @Operation(
         summary = "Listar roles",
-        description = "Retorna todos los roles registrados"
+        description = "Retorna roles registrados. Si se envía 'page', retorna PaginaResponse con soporte para paginación y filtros; si no, retorna la lista completa para compatibilidad."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Roles listados exitosamente")
     })
     @GetMapping
-    public List<RolResponse> listar(@RequestParam(required = false) Boolean activo) {
+    public Object listar(
+        @RequestParam(required = false) String buscar,
+        @RequestParam(required = false) String tipo,
+        @RequestParam(required = false) Boolean activo,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String sortBy,
+        @RequestParam(defaultValue = "asc") String direction
+    ) {
+        if (page != null) {
+            return PaginaResponse.de(
+                rolService.listarPaginado(buscar, tipo, activo, page, size, sortBy, direction)
+            );
+        }
         return rolService.listar(activo);
     }
 

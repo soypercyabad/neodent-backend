@@ -12,7 +12,11 @@ import com.neodent.usuario.model.Rol;
 import com.neodent.usuario.repository.ModuloRepository;
 import com.neodent.usuario.repository.RolRepository;
 import com.neodent.usuario.repository.UsuarioRepository;
+import com.neodent.usuario.dto.response.RolResumenEstadosResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +38,55 @@ public class RolService {
     private final RolRepository rolRepository;
     private final UsuarioRepository usuarioRepository;
     private final ModuloRepository moduloRepository;
+
+    @Transactional(readOnly = true)
+    public Page<RolResponse> listarPaginado(
+        String buscar,
+        String tipo,
+        Boolean activo,
+        int page,
+        int size,
+        String sortBy,
+        String direction
+    ) {
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+        String tipoNormalizado = tipo != null && !tipo.isBlank() ? tipo.trim().toUpperCase() : null;
+
+        String campoOrden = switch (sortBy != null ? sortBy.toLowerCase() : "nombre") {
+            case "id" -> "id";
+            case "descripcion" -> "descripcion";
+            case "activo" -> "activo";
+            default -> "nombre";
+        };
+
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction)
+            ? Sort.Direction.DESC
+            : Sort.Direction.ASC;
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(sortDirection, campoOrden));
+
+        return rolRepository.buscarPaginado(buscarNormalizado, tipoNormalizado, activo, pageable)
+            .map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public RolResumenEstadosResponse resumenEstados(String buscar) {
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+        List<Object[]> resultados = rolRepository.contarPorEstados(buscarNormalizado);
+
+        if (resultados.isEmpty() || resultados.get(0) == null) {
+            return new RolResumenEstadosResponse(0L, 0L, 0L, 0L, 0L);
+        }
+
+        Object[] fila = resultados.get(0);
+        long todos = fila[0] instanceof Number n ? n.longValue() : 0L;
+        long activos = fila[1] instanceof Number n ? n.longValue() : 0L;
+        long inactivos = fila[2] instanceof Number n ? n.longValue() : 0L;
+        long sistema = fila[3] instanceof Number n ? n.longValue() : 0L;
+        long personalizados = fila[4] instanceof Number n ? n.longValue() : 0L;
+
+        return new RolResumenEstadosResponse(todos, activos, inactivos, sistema, personalizados);
+    }
 
     @Transactional(readOnly = true)
     public List<RolResponse> listar(Boolean activo) {
