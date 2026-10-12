@@ -1,7 +1,9 @@
 package com.neodent.sede.controller;
 
+import com.neodent.shared.response.PaginaResponse;
 import com.neodent.sede.dto.request.SedeRequest;
 import com.neodent.sede.dto.response.SedeCatalogoResponse;
+import com.neodent.sede.dto.response.SedeResumenEstadosResponse;
 import com.neodent.sede.dto.response.SedeResponse;
 import com.neodent.sede.service.SedeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +29,12 @@ public class SedeController {
 
     public record EstadoRequest(@NotNull(message = "El estado es obligatorio") Boolean activo) {}
 
+    @Operation(summary = "Resumen de conteos de sedes por estado", description = "Retorna el total de sedes, activas e inactivas")
+    @GetMapping("/resumen-estados")
+    public SedeResumenEstadosResponse resumenEstados(@RequestParam(required = false) String buscar) {
+        return service.resumenEstados(buscar);
+    }
+
     @Operation(
         summary = "Catálogo ligero de sedes activas",
         description = "Retorna una lista simplificada de sedes activas (id, nombre, distrito) ideal para selectores de formularios"
@@ -41,13 +49,25 @@ public class SedeController {
 
     @Operation(
         summary = "Listar sedes",
-        description = "Retorna la lista de todas las sedes registradas"
+        description = "Retorna la lista de sedes registradas. Si se envía 'page', retorna PaginaResponse con paginación y búsqueda; si no, retorna la lista completa para compatibilidad."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Sedes listadas exitosamente")
     })
     @GetMapping
-    public List<SedeResponse> listar() {
+    public Object listar(
+        @RequestParam(required = false) String buscar,
+        @RequestParam(required = false) Boolean activo,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String sortBy,
+        @RequestParam(defaultValue = "asc") String direction
+    ) {
+        if (page != null) {
+            return PaginaResponse.de(
+                service.listarPaginado(buscar, activo, page, size, sortBy, direction)
+            );
+        }
         return service.listar();
     }
 

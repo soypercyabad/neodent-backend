@@ -1,5 +1,6 @@
 package com.neodent.sede.service;
 
+import com.neodent.sede.dto.response.SedeResumenEstadosResponse;
 import com.neodent.sede.dto.request.SedeRequest;
 import com.neodent.sede.dto.response.SedeCatalogoResponse;
 import com.neodent.sede.dto.response.SedeResponse;
@@ -7,6 +8,8 @@ import com.neodent.sede.model.Sede;
 import com.neodent.sede.repository.SedeRepository;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,53 @@ import java.util.List;
 public class SedeService {
 
     private final SedeRepository repository;
+
+    @Transactional(readOnly = true)
+    public Page<SedeResponse> listarPaginado(
+        String buscar,
+        Boolean activo,
+        int page,
+        int size,
+        String sortBy,
+        String direction
+    ) {
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+
+        String campoOrden = switch (sortBy != null ? sortBy.toLowerCase() : "nombre") {
+            case "direccion" -> "direccion";
+            case "distrito" -> "distrito";
+            case "departamento" -> "departamento";
+            case "activo" -> "activo";
+            case "fechacreacion" -> "fechaCreacion";
+            default -> "nombre";
+        };
+
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction)
+            ? Sort.Direction.DESC
+            : Sort.Direction.ASC;
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(sortDirection, campoOrden));
+
+        return repository.buscarPaginado(buscarNormalizado, activo, pageable)
+            .map(this::mapear);
+    }
+
+    @Transactional(readOnly = true)
+    public SedeResumenEstadosResponse resumenEstados(String buscar) {
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+        List<Object[]> resultados = repository.contarPorEstados(buscarNormalizado);
+
+        if (resultados.isEmpty() || resultados.get(0) == null) {
+            return new SedeResumenEstadosResponse(0L, 0L, 0L);
+        }
+
+        Object[] fila = resultados.get(0);
+        long todas = fila[0] instanceof Number n ? n.longValue() : 0L;
+        long activas = fila[1] instanceof Number n ? n.longValue() : 0L;
+        long inactivas = fila[2] instanceof Number n ? n.longValue() : 0L;
+
+        return new SedeResumenEstadosResponse(todas, activas, inactivas);
+    }
 
     @Transactional(readOnly = true)
     public List<SedeCatalogoResponse> catalogo() {
