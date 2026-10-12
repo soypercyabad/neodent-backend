@@ -6,7 +6,11 @@ import com.neodent.usuario.dto.request.ModuloRequest;
 import com.neodent.usuario.dto.response.ModuloResponse;
 import com.neodent.usuario.model.Modulo;
 import com.neodent.usuario.repository.ModuloRepository;
+import com.neodent.usuario.dto.response.ModuloResumenEstadosResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +21,52 @@ import java.util.List;
 public class ModuloService {
 
     private final ModuloRepository moduloRepository;
+
+    @Transactional(readOnly = true)
+    public Page<ModuloResponse> listarPaginado(
+        String buscar,
+        Boolean activo,
+        int page,
+        int size,
+        String sortBy,
+        String direction
+    ) {
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+
+        String campoOrden = switch (sortBy != null ? sortBy.toLowerCase() : "orden") {
+            case "nombre" -> "nombre";
+            case "codigo" -> "codigo";
+            case "ruta" -> "ruta";
+            case "activo" -> "activo";
+            default -> "orden";
+        };
+
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction)
+            ? Sort.Direction.DESC
+            : Sort.Direction.ASC;
+
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(sortDirection, campoOrden));
+
+        return moduloRepository.buscarPaginado(buscarNormalizado, activo, pageable)
+            .map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public ModuloResumenEstadosResponse resumenEstados(String buscar) {
+        String buscarNormalizado = buscar != null && !buscar.isBlank() ? buscar.trim() : null;
+        List<Object[]> resultados = moduloRepository.contarPorEstados(buscarNormalizado);
+
+        if (resultados.isEmpty() || resultados.get(0) == null) {
+            return new ModuloResumenEstadosResponse(0L, 0L, 0L);
+        }
+
+        Object[] fila = resultados.get(0);
+        long todos = fila[0] instanceof Number n ? n.longValue() : 0L;
+        long activos = fila[1] instanceof Number n ? n.longValue() : 0L;
+        long inactivos = fila[2] instanceof Number n ? n.longValue() : 0L;
+
+        return new ModuloResumenEstadosResponse(todos, activos, inactivos);
+    }
 
     @Transactional(readOnly = true)
     public List<ModuloResponse> listar(Boolean activo) {

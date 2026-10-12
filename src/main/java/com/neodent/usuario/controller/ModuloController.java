@@ -1,6 +1,8 @@
 package com.neodent.usuario.controller;
 
+import com.neodent.shared.response.PaginaResponse;
 import com.neodent.usuario.dto.request.ModuloRequest;
+import com.neodent.usuario.dto.response.ModuloResumenEstadosResponse;
 import com.neodent.usuario.dto.response.ModuloResponse;
 import com.neodent.usuario.service.ModuloService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,12 +24,30 @@ public class ModuloController {
 
     private final ModuloService moduloService;
 
-    @Operation(summary = "Listar módulos", description = "Retorna el catálogo de módulos del sistema, con filtro opcional por estado activo")
+    @Operation(summary = "Resumen de conteos de módulos por estado", description = "Retorna el total de módulos, activos e inactivos")
+    @GetMapping("/resumen-estados")
+    public ModuloResumenEstadosResponse resumenEstados(@RequestParam(required = false) String buscar) {
+        return moduloService.resumenEstados(buscar);
+    }
+
+    @Operation(summary = "Listar módulos", description = "Retorna el catálogo de módulos del sistema. Si se envía 'page', retorna PaginaResponse con soporte para paginación y búsqueda; si no, retorna la lista completa para compatibilidad.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Módulos listados exitosamente")
     })
     @GetMapping
-    public List<ModuloResponse> listar(@RequestParam(required = false) Boolean activo) {
+    public Object listar(
+        @RequestParam(required = false) String buscar,
+        @RequestParam(required = false) Boolean activo,
+        @RequestParam(required = false) Integer page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(required = false) String sortBy,
+        @RequestParam(defaultValue = "asc") String direction
+    ) {
+        if (page != null) {
+            return PaginaResponse.de(
+                moduloService.listarPaginado(buscar, activo, page, size, sortBy, direction)
+            );
+        }
         return moduloService.listar(activo);
     }
 
