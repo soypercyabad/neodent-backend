@@ -1,18 +1,23 @@
 package com.neodent.legal.controller;
 
 import com.neodent.legal.dto.AceptacionTerminosResponse;
+import com.neodent.legal.dto.AceptarTerminosRequest;
 import com.neodent.legal.dto.TerminosCondicionesResponse;
+import com.neodent.legal.dto.TerminosPendientesResponse;
 import com.neodent.legal.service.TerminosCondicionesService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,7 +33,7 @@ public class TerminosCondicionesController {
     private final TerminosCondicionesService terminosService;
 
     /* =========================================================
-     * ENDPOINTS PÚBLICOS
+     * ENDPOINTS PÚBLICOS Y USUARIO AUTENTICADO
      * ========================================================= */
 
     @Operation(
@@ -52,12 +57,65 @@ public class TerminosCondicionesController {
     }
 
     @Operation(
+        summary = "Visualizar documento de Términos y Condiciones por ID",
+        description = "Retorna el flujo binario del PDF para visualización nativa en el navegador."
+    )
+    @GetMapping("/{id}/ver")
+    public ResponseEntity<byte[]> verDocumentoPorId(@PathVariable Long id) {
+        byte[] pdfBytes = terminosService.obtenerPdfPorId(id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline().filename("terminos-" + id + ".pdf").build());
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+
+    @Operation(
         summary = "Consultar metadatos de la versión activa",
         description = "Devuelve el título, versión y URL oficial del documento actualmente vigente."
     )
     @GetMapping("/info")
     public ResponseEntity<TerminosCondicionesResponse> obtenerInfoActivo() {
         return ResponseEntity.ok(terminosService.obtenerInfoActivo());
+    }
+
+    @Operation(
+        summary = "Verificar si el usuario autenticado tiene términos pendientes por aceptar",
+        description = "Revisa si el usuario autenticado ya aceptó la versión oficial activa de los términos y condiciones."
+    )
+    @GetMapping("/pendiente")
+    public ResponseEntity<TerminosPendientesResponse> verificarTerminosPendientes(
+        @AuthenticationPrincipal Jwt jwt
+    ) {
+        if (jwt == null || jwt.getSubject() == null) {
+            return ResponseEntity.ok(new TerminosPendientesResponse(false, null));
+        }
+        Long usuarioId = Long.valueOf(jwt.getSubject());
+        return ResponseEntity.ok(terminosService.verificarPendiente(usuarioId));
+    }
+
+    @Operation(
+        summary = "Aceptar los términos y condiciones vigentes",
+        description = "Registra la firma digital/aceptación del usuario autenticado para los términos vigentes."
+    )
+    @PostMapping("/aceptar")
+    public ResponseEntity<Map<String, Object>> aceptarTerminos(
+        @RequestBody(required = false) AceptarTerminosRequest request,
+        @AuthenticationPrincipal Jwt jwt,
+        HttpServletRequest httpRequest
+    ) {
+        if (jwt == null || jwt.getSubject() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Long usuarioId = Long.valueOf(jwt.getSubject());
+        Long terminosId = request != null ? request.terminosId() : null;
+        terminosService.registrarAceptacionUsuario(usuarioId, terminosId, httpRequest);
+        return ResponseEntity.ok(Map.of(
+            "exito", true,
+            "mensaje", "Términos y condiciones aceptados correctamente"
+        ));
     }
 
     /* =========================================================
@@ -153,17 +211,16 @@ public class TerminosCondicionesController {
 
     @Operation(
         summary = "Listar personas que aceptaron los términos y condiciones (Admin)",
-        description = "Devuelve el registro de auditoría de todas las personas que aceptaron los términos. Si se envía 'page', retorna PaginaResponse; si no, la lista completa."
+        description = "Devuelve el registro de auditoría de aceptaciones. Búsqueda por número de documento."
     )
     @GetMapping("/admin/aceptaciones")
     public ResponseEntity<?> listarAceptaciones(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false, defaultValue = "10") Integer size,
-            @RequestParam(required = false) String buscar,
-            @RequestParam(required = false) String version) {
+            @RequestParam(required = false) String buscar) {
         if (page != null) {
             return ResponseEntity.ok(com.neodent.shared.response.PaginaResponse.de(
-                terminosService.listarAceptacionesPaginado(buscar, version, page, size)
+                terminosService.listarAceptacionesPaginado(buscar, page, size)
             ));
         }
         return ResponseEntity.ok(terminosService.listarAceptaciones());

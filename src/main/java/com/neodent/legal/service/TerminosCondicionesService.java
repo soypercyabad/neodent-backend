@@ -1,7 +1,9 @@
 package com.neodent.legal.service;
 
 import com.neodent.legal.dto.AceptacionTerminosResponse;
+import com.neodent.legal.dto.TerminoPendienteDto;
 import com.neodent.legal.dto.TerminosCondicionesResponse;
+import com.neodent.legal.dto.TerminosPendientesResponse;
 import com.neodent.legal.model.AceptacionTerminos;
 import com.neodent.legal.model.TerminosCondiciones;
 import com.neodent.legal.repository.AceptacionTerminosRepository;
@@ -13,6 +15,9 @@ import com.neodent.personal.repository.PersonalRepository;
 import com.neodent.shared.exception.BusinessException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.storage.StorageService;
+import com.neodent.usuario.model.Usuario;
+import com.neodent.usuario.repository.UsuarioRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -42,6 +47,7 @@ public class TerminosCondicionesService {
 
     private final TerminosCondicionesRepository repository;
     private final AceptacionTerminosRepository aceptacionRepository;
+    private final UsuarioRepository usuarioRepository;
     private final PacienteRepository pacienteRepository;
     private final PersonalRepository personalRepository;
     private final StorageService storageService;
@@ -81,7 +87,7 @@ public class TerminosCondicionesService {
             log.info("Archivo de términos subido a S3 con clave: {}", claveS3);
 
             if (activar) {
-                desactivarTodas();
+                desactivarTodas(tit);
             }
 
             TerminosCondiciones doc = new TerminosCondiciones();
@@ -145,7 +151,7 @@ public class TerminosCondicionesService {
         }
 
         if (Boolean.TRUE.equals(activar) && !Boolean.TRUE.equals(doc.getVigente())) {
-            desactivarTodas();
+            desactivarTodas(tit);
             doc.setVigente(true);
         }
 
@@ -162,7 +168,7 @@ public class TerminosCondicionesService {
         }
 
         if (activo) {
-            desactivarTodas();
+            desactivarTodas(doc.getTitulo());
             doc.setVigente(true);
         } else {
             doc.setVigente(false);
@@ -201,52 +207,45 @@ public class TerminosCondicionesService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AceptacionTerminosResponse> listarAceptacionesPaginado(String buscar, String version, int page, int size) {
+    public Page<AceptacionTerminosResponse> listarAceptacionesPaginado(String buscar, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "aceptadoEn"));
-        return aceptacionRepository.buscarPaginado(buscar, version, pageable)
+        return aceptacionRepository.buscarPaginado(buscar, pageable)
             .map(this::mapearAceptacion);
     }
 
     private AceptacionTerminosResponse mapearAceptacion(AceptacionTerminos a) {
         Long usuarioId = a.getUsuario().getId();
-        String correo = a.getUsuario().getCorreo();
 
-        String nombreCompleto = "Usuario #" + usuarioId;
+        String tipoDoc = "DNI";
         String numeroDoc = "-";
 
         Optional<Paciente> pacienteOpt = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId);
         if (pacienteOpt.isPresent()) {
             Paciente p = pacienteOpt.get();
-            nombreCompleto = String.format("%s %s %s",
-                p.getNombres(),
-                p.getApellidoPaterno(),
-                p.getApellidoMaterno() != null ? p.getApellidoMaterno() : ""
-            ).trim();
-            numeroDoc = p.getNumeroDocumento();
+            numeroDoc = p.getNumeroDocumento() != null ? p.getNumeroDocumento() : "-";
+            if (p.getTipoDocumento() != null && p.getTipoDocumento().getCodigo() != null) {
+                tipoDoc = p.getTipoDocumento().getCodigo();
+            }
         } else {
             Optional<Personal> personalOpt = personalRepository.findByUsuarioId(usuarioId);
             if (personalOpt.isPresent()) {
                 Personal pers = personalOpt.get();
-                nombreCompleto = String.format("%s %s %s",
-                    pers.getNombres(),
-                    pers.getApellidoPaterno(),
-                    pers.getApellidoMaterno() != null ? pers.getApellidoMaterno() : ""
-                ).trim();
-                numeroDoc = pers.getNumeroDocumento();
+                numeroDoc = pers.getNumeroDocumento() != null ? pers.getNumeroDocumento() : "-";
+                if (pers.getTipoDocumento() != null && pers.getTipoDocumento().getCodigo() != null) {
+                    tipoDoc = pers.getTipoDocumento().getCodigo();
+                }
             }
         }
 
         return new AceptacionTerminosResponse(
             a.getId(),
-            usuarioId,
-            correo,
-            nombreCompleto,
+            tipoDoc,
             numeroDoc,
-            a.getTerminos().getVersion(),
             a.getTerminos().getTitulo(),
-            a.getAceptadoEn(),
+            a.getTerminos().getVersion(),
             a.getIp(),
-            a.getAgenteUsuario()
+            a.getAgenteUsuario(),
+            a.getAceptadoEn()
         );
     }
 
@@ -306,17 +305,96 @@ public class TerminosCondicionesService {
         );
     }
 
-    private void desactivarTodas() {
+    @Transactional(readOnly = true)
+    public TerminosPendientesResponse verificarPendiente(Long usuarioId) {
+        List<TerminosCondiciones> activos = repository.findByVigenteTrueOrderByFechaPublicacionDesc();
+        if (activos.isEmpty()) {
+            return new TerminosPendientesResponse(false, List.of());
+        }
+
+        List<TerminoPendienteDto> pendientes = new java.util.ArrayList<>();
+        java.util.Set<String> titulosVistos = new java.util.HashSet<>();
+
+        for (TerminosCondiciones doc : activos) {
+            String claveTipo = doc.getTitulo() != null ? doc.getTitulo().trim().toLowerCase() : "default";
+            if (titulosVistos.add(claveTipo)) {
+                boolean yaAcepto = aceptacionRepository.existsByUsuarioIdAndTerminosId(usuarioId, doc.getId());
+                if (!yaAcepto) {
+                    String urlVer = (activos.size() == 1)
+                        ? "/api/terminos-condiciones"
+                        : "/api/terminos-condiciones/" + doc.getId() + "/ver";
+
+                    pendientes.add(new TerminoPendienteDto(
+                        doc.getId(),
+                        doc.getTitulo(),
+                        urlVer
+                    ));
+                }
+            }
+        }
+
+        return new TerminosPendientesResponse(!pendientes.isEmpty(), pendientes);
+    }
+
+    @Transactional
+    public void registrarAceptacionUsuario(Long usuarioId, Long terminosId, HttpServletRequest request) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+            .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        TerminosCondiciones terminos;
+        if (terminosId != null) {
+            terminos = repository.findById(terminosId)
+                .orElseThrow(() -> new ResourceNotFoundException("Documento de términos no encontrado"));
+        } else {
+            terminos = repository.findFirstByVigenteTrueOrderByFechaPublicacionDesc()
+                .orElseThrow(() -> new BusinessException("No hay una versión activa de términos y condiciones para aceptar"));
+        }
+
+        if (aceptacionRepository.existsByUsuarioIdAndTerminosId(usuarioId, terminos.getId())) {
+            return;
+        }
+
+        AceptacionTerminos aceptacion = new AceptacionTerminos();
+        aceptacion.setUsuario(usuario);
+        aceptacion.setTerminos(terminos);
+        aceptacion.setAceptadoEn(LocalDateTime.now());
+
+        if (request != null) {
+            String ip = request.getHeader("X-Forwarded-For");
+            if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("X-Real-IP");
+            }
+            if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getRemoteAddr();
+            } else if (ip.contains(",")) {
+                ip = ip.split(",")[0].trim();
+            }
+            aceptacion.setIp(ip);
+
+            String ua = request.getHeader("User-Agent");
+            if (ua != null && ua.length() > 255) {
+                ua = ua.substring(0, 255);
+            }
+            aceptacion.setAgenteUsuario(ua);
+        }
+
+        aceptacionRepository.save(aceptacion);
+        log.info("Usuario {} aceptó los términos versión: {}", usuarioId, terminos.getVersion());
+    }
+
+    private void desactivarTodas(String titulo) {
         try {
             List<TerminosCondiciones> todas = repository.findAll();
             for (TerminosCondiciones t : todas) {
                 if (Boolean.TRUE.equals(t.getVigente())) {
-                    t.setVigente(false);
+                    if (titulo == null || t.getTitulo() == null || t.getTitulo().trim().equalsIgnoreCase(titulo.trim())) {
+                        t.setVigente(false);
+                    }
                 }
             }
             repository.saveAll(todas);
         } catch (Exception ex) {
-            log.warn("Fallo al desactivar versiones anteriores: {}", ex.getMessage());
+            log.warn("Fallo al desactivar versiones anteriores del mismo tipo: {}", ex.getMessage());
         }
     }
 
@@ -338,6 +416,9 @@ public class TerminosCondicionesService {
         String clave = doc.getContenido() != null ? doc.getContenido() : CLAVE_S3_DEFECTO;
         String nombreArchivo = clave.contains("/") ? clave.substring(clave.lastIndexOf('/') + 1) : NOMBRE_ARCHIVO_DEFECTO;
         String urlS3Directa = storageService.obtenerUrl(clave);
+        String urlVisualizar = (doc.getId() != null)
+            ? "/api/terminos-condiciones/" + doc.getId() + "/ver"
+            : "/api/terminos-condiciones";
 
         return new TerminosCondicionesResponse(
             doc.getId(),
@@ -347,7 +428,7 @@ public class TerminosCondicionesService {
             clave,
             0L,
             Boolean.TRUE.equals(doc.getVigente()),
-            urlS3Directa,
+            urlVisualizar,
             urlS3Directa,
             doc.getFechaPublicacion(),
             doc.getFechaCreacion() != null ? doc.getFechaCreacion() : doc.getFechaPublicacion()

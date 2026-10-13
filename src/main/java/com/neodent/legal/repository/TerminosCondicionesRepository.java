@@ -15,6 +15,8 @@ public interface TerminosCondicionesRepository extends JpaRepository<TerminosCon
 
     Optional<TerminosCondiciones> findFirstByVigenteTrueOrderByFechaPublicacionDesc();
 
+    List<TerminosCondiciones> findByVigenteTrueOrderByFechaPublicacionDesc();
+
     List<TerminosCondiciones> findAllByOrderByFechaCreacionDesc();
 
     @Modifying

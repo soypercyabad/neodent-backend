@@ -53,12 +53,20 @@ public class SecurityConfig {
                     "/api/auth/me"
                 ).authenticated()
 
-                /* Autenticación / registro / activación */
+                /* Autenticación / registro / activación / visualización de términos */
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/terminos-condiciones",
-                    "/api/terminos-condiciones/info"
+                    "/api/terminos-condiciones/info",
+                    "/api/terminos-condiciones/*/ver",
+                    "/api/terminos-condiciones/admin/*/ver"
                 ).permitAll()
+
+                /* Verificación y aceptación de términos vigentes */
+                .requestMatchers(
+                    "/api/terminos-condiciones/pendiente",
+                    "/api/terminos-condiciones/aceptar"
+                ).authenticated()
 
                 /* Consulta de pacientes */
                 .requestMatchers(

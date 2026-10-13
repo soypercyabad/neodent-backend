@@ -27,16 +27,8 @@ public interface AceptacionTerminosRepository extends JpaRepository<AceptacionTe
             LEFT JOIN Paciente pac ON pac.usuario.id = u.id
             LEFT JOIN Personal per ON per.usuario.id = u.id
             WHERE (:buscar IS NULL OR :buscar = '' OR
-                   LOWER(u.correo) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(pac.nombres, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(pac.apellidoPaterno, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
                    LOWER(COALESCE(pac.numeroDocumento, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(per.nombres, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(per.apellidoPaterno, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(per.numeroDocumento, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(t.version) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(t.titulo) LIKE LOWER(CONCAT('%', :buscar, '%')))
-              AND (:version IS NULL OR :version = '' OR t.version = :version)
+                   LOWER(COALESCE(per.numeroDocumento, '')) LIKE LOWER(CONCAT('%', :buscar, '%')))
         """,
         countQuery = """
             SELECT COUNT(a) FROM AceptacionTerminos a
@@ -45,21 +37,12 @@ public interface AceptacionTerminosRepository extends JpaRepository<AceptacionTe
             LEFT JOIN Paciente pac ON pac.usuario.id = u.id
             LEFT JOIN Personal per ON per.usuario.id = u.id
             WHERE (:buscar IS NULL OR :buscar = '' OR
-                   LOWER(u.correo) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(pac.nombres, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(pac.apellidoPaterno, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
                    LOWER(COALESCE(pac.numeroDocumento, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(per.nombres, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(per.apellidoPaterno, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(COALESCE(per.numeroDocumento, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(t.version) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                   LOWER(t.titulo) LIKE LOWER(CONCAT('%', :buscar, '%')))
-              AND (:version IS NULL OR :version = '' OR t.version = :version)
+                   LOWER(COALESCE(per.numeroDocumento, '')) LIKE LOWER(CONCAT('%', :buscar, '%')))
         """
     )
     Page<AceptacionTerminos> buscarPaginado(
         @Param("buscar") String buscar,
-        @Param("version") String version,
         Pageable pageable
     );
 }
