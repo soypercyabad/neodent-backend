@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recordatorio de cita - NeoDent</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+  <!-- Preheader oculto -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+    Recuerda tu próxima cita odontológica en NeoDent.
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;background-color:#f4f7fb;">
+    <tr>
+      <td align="center" style="padding:40px 15px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,0.08);">
+          <!-- HEADER: identidad verde de NeoDent -->
+          <tr>
+            <td align="center" bgcolor="#0f766e" style="background-color:#0f766e;padding:26px 20px;">
+              <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0 auto;">
+                <tr>
+                  <td valign="middle" style="padding-right:8px;vertical-align:middle;">
+                    <img src="https://www.svgrepo.com/show/484197/tooth.svg" alt="" width="24" height="24" style="display:block;width:24px;height:24px;border:0;">
+                  </td>
+                  <td valign="middle" style="vertical-align:middle;font-size:30px;line-height:36px;font-weight:bold;letter-spacing:0.5px;color:#ffffff;">
+                    NeoDent
+                  </td>
+                </tr>
+              </table>
+              <div style="margin-top:8px;font-size:14px;line-height:20px;color:#ffffff;">Cuidamos tu sonrisa</div>
+            </td>
+          </tr>
+
+          <!-- CONTENIDO -->
+          <tr>
+            <td style="padding:36px 32px;">
+              <div style="text-align:center;margin-bottom:16px;">
+                <span style="display:inline-block;padding:7px 14px;background-color:#f0fdfa;border:1px solid #99f6e4;border-radius:20px;font-size:12px;line-height:18px;font-weight:bold;letter-spacing:0.5px;color:#0f766e;">
+                  RECORDATORIO DE CITA
+                </span>
+              </div>
+
+              <h1 style="margin:0 0 16px;text-align:center;font-size:24px;line-height:32px;color:#111827;">
+                ¡Tu próxima cita se acerca!
+              </h1>
+              <p style="margin:0 0 10px;text-align:center;font-size:15px;line-height:24px;color:#4b5563;">
+                Hola <strong th:text="${nombrePaciente}" style="color:#0f766e;">Paciente</strong>,
+              </p>
+              <p style="margin:0 0 28px;text-align:center;font-size:15px;line-height:24px;color:#4b5563;">
+                Queremos recordarte que tienes una atención odontológica programada próximamente en <strong style="color:#0f766e;">NeoDent</strong>. Revisa los detalles de tu cita:
+              </p>
+
+              <!-- TARJETA DE DATOS -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;background-color:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;">
+                <tr>
+                  <td style="padding:24px;">
+                    <div style="margin-bottom:18px;text-align:center;font-size:13px;line-height:18px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#0f766e;">Detalles de tu cita</div>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;font-size:14px;line-height:20px;">
+                      <tr>
+                        <td width="40%" style="padding:10px 0;border-bottom:1px solid #ccfbf1;color:#6b7280;font-weight:bold;">Fecha</td>
+                        <td align="right" th:text="${fecha}" style="padding:10px 0;border-bottom:1px solid #ccfbf1;font-weight:bold;color:#111827;">12/10/2026</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 0;border-bottom:1px solid #ccfbf1;color:#6b7280;font-weight:bold;">Hora</td>
+                        <td align="right" th:text="${hora}" style="padding:10px 0;border-bottom:1px solid #ccfbf1;font-weight:bold;color:#0f766e;">10:00 AM</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 0;border-bottom:1px solid #ccfbf1;color:#6b7280;font-weight:bold;">Odontólogo</td>
+                        <td align="right" th:text="${odontologo}" style="padding:10px 0;border-bottom:1px solid #ccfbf1;font-weight:bold;color:#111827;">Dr. Ejemplo</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 0;border-bottom:1px solid #ccfbf1;color:#6b7280;font-weight:bold;">Especialidad</td>
+                        <td align="right" th:text="${especialidad}" style="padding:10px 0;border-bottom:1px solid #ccfbf1;color:#111827;">Odontología general</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 0;color:#6b7280;font-weight:bold;">Sede</td>
+                        <td align="right" th:text="${sede}" style="padding:10px 0;font-weight:bold;color:#111827;">Sede Central</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- MENSAJE DE ANTICIPACIÓN -->
+              <div style="margin-top:24px;padding:16px;background-color:#fff7ed;border-left:4px solid #f59e0b;border-radius:6px;">
+                <p style="margin:0;font-size:13px;line-height:21px;color:#7c4a03;">
+                  <strong>Importante:</strong> Te recomendamos llegar con <strong>10 minutos de anticipación</strong> para realizar tu registro en recepción. Si necesitas reprogramar o cancelar, utiliza las opciones disponibles en tu portal o comunícate con NeoDent con anticipación.
+                </p>
+              </div>
+
+              <!-- CTA opcional -->
+              <table th:if="${portalUrl != null and !#strings.isEmpty(portalUrl)}" width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;margin-top:28px;">
+                <tr>
+                  <td align="center">
+                    <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                      <tr>
+                        <td align="center" bgcolor="#0f766e" style="background-color:#0f766e;border-radius:8px;">
+                          <a th:href="${portalUrl}" href="#" target="_blank" style="display:inline-block;padding:14px 28px;color:#ffffff;font-size:15px;line-height:20px;font-weight:bold;text-decoration:none;border-radius:8px;">Ver mis citas en el portal</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:28px 0 0;text-align:center;font-size:14px;line-height:22px;color:#4b5563;">
+                ¡Te esperamos para seguir cuidando tu sonrisa!
+              </p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td align="center" style="padding:24px 20px;border-top:1px solid #e5e7eb;background-color:#fafafa;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6b7280;">© NeoDent</p>
+              <p style="margin:0;font-size:12px;line-height:18px;color:#9ca3af;">Este es un recordatorio automático de tu cita odontológica.<br>Si necesitas ayuda, contáctanos mediante nuestros canales oficiales.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

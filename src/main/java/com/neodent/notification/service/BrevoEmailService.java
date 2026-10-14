@@ -4,6 +4,7 @@ import com.neodent.notification.EmailDeliveryException;
 import com.neodent.notification.dto.BienvenidaPersonalEmailData;
 import com.neodent.notification.dto.CitaCanceladaEmailData;
 import com.neodent.notification.dto.CitaConfirmadaEmailData;
+import com.neodent.notification.dto.CitaRecordatorioEmailData;
 import com.neodent.notification.dto.CitaReprogramadaEmailData;
 import com.neodent.notification.dto.InvitacionCuentaEmailData;
 import com.neodent.shared.constants.AppConstants;
@@ -190,6 +191,22 @@ public class BrevoEmailService implements EmailService {
 
         String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.CITA_CANCELADA, context);
         enviar(destinatario, "Tu cita fue cancelada - NeoDent", html);
+    }
+
+    @Async("taskExecutor")
+    @Override
+    public void enviarRecordatorioCita(String destinatario, CitaRecordatorioEmailData data) {
+        Context context = new Context();
+        context.setVariable("nombrePaciente", data.pacienteNombre());
+        context.setVariable("fecha", data.fechaCita());
+        context.setVariable("hora", data.horaCita());
+        context.setVariable("odontologo", data.odontologoNombre());
+        context.setVariable("especialidad", data.especialidad());
+        context.setVariable("sede", data.sedeNombre());
+        context.setVariable("portalUrl", data.portalUrl());
+
+        String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.RECORDATORIO_CITA, context);
+        enviar(destinatario, "Recordatorio: Tu cita odontológica es pronto - NeoDent", html);
     }
 
     @Async("taskExecutor")

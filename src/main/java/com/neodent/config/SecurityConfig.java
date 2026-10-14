@@ -362,6 +362,20 @@ public class SecurityConfig {
                     AppConstants.Roles.RECEPCIONISTA
                 )
 
+                /* Centro de notificaciones de usuario (Campanita) */
+                .requestMatchers(
+                    "/api/notificaciones",
+                    "/api/notificaciones/**"
+                ).authenticated()
+
+                /* Configuración de notificaciones y recordatorios (ADMIN) */
+                .requestMatchers(
+                    "/api/configuracion/notificaciones",
+                    "/api/configuracion/notificaciones/**"
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
+                )
+
                 /* Todo lo no definido explícitamente queda bloqueado.*/
                 .anyRequest().denyAll()
             )

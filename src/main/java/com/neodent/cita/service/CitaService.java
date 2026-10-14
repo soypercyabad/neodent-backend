@@ -32,6 +32,8 @@ import com.neodent.shared.exception.ForbiddenException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.shared.response.PaginaResponse;
 import com.neodent.usuario.model.Usuario;
+import com.neodent.notification.model.TipoNotificacion;
+import com.neodent.notification.service.NotificacionService;
 import com.neodent.usuario.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +65,7 @@ public class CitaService {
     private final HorarioOdontologoRepository horarioRepository;
     private final OdontologoRepository odontologoRepository;
     private final EmailService emailService;
+    private final NotificacionService notificacionService;
     private final ServicioSedeRepository servicioSedeRepository;
     private final Clock clock;
     private static final long TOLERANCIA_NO_ASISTENCIA_MINUTOS = 15;
@@ -479,6 +482,34 @@ public class CitaService {
             enviarCorreoCancelacion(citaGuardada, fechaHoraAnterior, request.motivo());
         } catch (Exception ex) {
             log.error("La cita {} fue cancelada, pero no se pudo enviar el correo: {}",
+                citaGuardada.getId(), ex.getMessage(), ex);
+        }
+
+        try {
+            if (citaGuardada.getPaciente() != null && citaGuardada.getPaciente().getUsuario() != null) {
+                DateTimeFormatter fechaFmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                DateTimeFormatter horaFmt = DateTimeFormatter.ofPattern("hh:mm a");
+                String fechaStr = fechaHoraAnterior.format(fechaFmt);
+                String horaStr = fechaHoraAnterior.format(horaFmt);
+                String motivoStr = (request.motivo() != null && !request.motivo().isBlank())
+                    ? request.motivo()
+                    : "No especificado";
+
+                String mensaje = String.format("Tu cita del %s a las %s fue cancelada. Motivo: %s",
+                    fechaStr, horaStr, motivoStr);
+
+                notificacionService.crearNotificacion(
+                    citaGuardada.getPaciente().getUsuario().getId(),
+                    TipoNotificacion.CANCELACION_CITA,
+                    "Cita cancelada",
+                    mensaje,
+                    "/mis-citas",
+                    "CITA",
+                    citaGuardada.getId()
+                );
+            }
+        } catch (Exception ex) {
+            log.error("La cita {} fue cancelada, pero no se pudo crear la notificación en portal: {}",
                 citaGuardada.getId(), ex.getMessage(), ex);
         }
 

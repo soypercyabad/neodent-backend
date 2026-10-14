@@ -271,4 +271,22 @@ public interface CitaRepository
         ORDER BY c.fechaHoraInicio ASC
     """)
     List<Cita> buscarCitasDashboardRecepcion(@Param("desde") LocalDateTime desde);
+
+    @Query("""
+        SELECT c FROM Cita c
+        JOIN FETCH c.paciente p
+        JOIN FETCH c.estado e
+        JOIN FETCH c.odontologoEspecialidad oe
+        JOIN FETCH oe.odontologo o
+        JOIN FETCH o.personal per
+        JOIN FETCH oe.especialidad esp
+        JOIN FETCH c.sede sd
+        WHERE c.recordatorioEnviado = false
+        AND e.nombre IN ('PROGRAMADA', 'CONFIRMADA')
+        AND c.fechaHoraInicio BETWEEN :desde AND :hasta
+    """)
+    List<Cita> buscarCitasParaRecordatorio(
+        @Param("desde") LocalDateTime desde,
+        @Param("hasta") LocalDateTime hasta
+    );
 }

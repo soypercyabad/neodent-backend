@@ -61,6 +61,12 @@ public class Cita {
     @Column(name = "confirmada_en")
     private LocalDateTime confirmadaEn;
 
+    @Column(name = "recordatorio_enviado", nullable = false)
+    private boolean recordatorioEnviado = false;
+
+    @Column(name = "recordatorio_enviado_en")
+    private LocalDateTime recordatorioEnviadoEn;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario creadoPor;
