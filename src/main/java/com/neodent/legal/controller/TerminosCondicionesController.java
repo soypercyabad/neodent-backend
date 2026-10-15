@@ -45,10 +45,11 @@ public class TerminosCondicionesController {
     @GetMapping
     public ResponseEntity<byte[]> verDocumentoActivo() {
         byte[] pdfBytes = terminosService.obtenerPdfActivo();
+        String nombreLimpio = terminosService.obtenerNombreArchivoDescargaActivo();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDisposition(ContentDisposition.inline().filename(TerminosCondicionesService.NOMBRE_ARCHIVO_DEFECTO).build());
+        headers.setContentDisposition(ContentDisposition.inline().filename(nombreLimpio).build());
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
@@ -61,13 +62,79 @@ public class TerminosCondicionesController {
     @GetMapping("/{id}/ver")
     public ResponseEntity<byte[]> verDocumentoPorId(@PathVariable Long id) {
         byte[] pdfBytes = terminosService.obtenerPdfPorId(id);
+        String nombreLimpio = terminosService.obtenerNombreArchivoDescargaPorId(id);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDisposition(ContentDisposition.inline().filename("terminos-" + id + ".pdf").build());
+        headers.setContentDisposition(ContentDisposition.inline().filename(nombreLimpio).build());
         headers.setContentLength(pdfBytes.length);
 
         return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+
+    @Operation(
+        summary = "Visualizar documento de Términos y Condiciones por nombre de archivo",
+        description = "Retorna el flujo binario del PDF para visualización nativa buscando por su nombre de archivo."
+    )
+    @GetMapping("/archivo/{filename}")
+    public ResponseEntity<byte[]> verDocumentoPorNombreArchivo(@PathVariable String filename) {
+        byte[] pdfBytes = terminosService.obtenerPdfPorNombreArchivo(filename);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.inline().filename(filename).build());
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+    }
+
+    @Operation(
+        summary = "Listar tipos de contratos o documentos legales disponibles",
+        description = "Devuelve el catálogo de tipos de documentos legales configurados en la plataforma."
+    )
+    @GetMapping("/tipos")
+    public ResponseEntity<java.util.List<com.neodent.legal.model.DocumentoLegal>> listarTipos() {
+        return ResponseEntity.ok(terminosService.listarTipos());
+    }
+
+    @Operation(summary = "Listar todos los tipos de documentos legales (Admin)")
+    @GetMapping("/admin/tipos")
+    public ResponseEntity<java.util.List<com.neodent.legal.model.DocumentoLegal>> listarTodosLosTipos() {
+        return ResponseEntity.ok(terminosService.listarTodosLosTipos());
+    }
+
+    @Operation(summary = "Crear nuevo tipo de documento legal (Admin)")
+    @PostMapping("/admin/tipos")
+    public ResponseEntity<com.neodent.legal.model.DocumentoLegal> crearTipo(
+            @RequestBody Map<String, Object> body) {
+        String codigo = (String) body.get("codigo");
+        String descripcion = (String) body.get("descripcion");
+        Integer grupo = body.get("grupo") != null ? Integer.valueOf(body.get("grupo").toString()) : 1;
+        Boolean activo = body.get("activo") != null ? Boolean.valueOf(body.get("activo").toString()) : true;
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            terminosService.crearTipo(codigo, descripcion, grupo, activo)
+        );
+    }
+
+    @Operation(summary = "Editar tipo de documento legal (Admin)")
+    @PutMapping("/admin/tipos/{id}")
+    public ResponseEntity<com.neodent.legal.model.DocumentoLegal> editarTipo(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        String descripcion = (String) body.get("descripcion");
+        Integer grupo = body.get("grupo") != null ? Integer.valueOf(body.get("grupo").toString()) : null;
+        Boolean activo = body.get("activo") != null ? Boolean.valueOf(body.get("activo").toString()) : null;
+        return ResponseEntity.ok(terminosService.editarTipo(id, descripcion, grupo, activo));
+    }
+
+    @Operation(summary = "Cambiar estado de tipo de documento legal (Admin)")
+    @PatchMapping("/admin/tipos/{id}/estado")
+    public ResponseEntity<Void> cambiarEstadoTipo(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body) {
+        boolean activo = body.getOrDefault("activo", true);
+        terminosService.cambiarEstadoTipo(id, activo);
+        return ResponseEntity.ok().build();
     }
 
     @Operation(
@@ -140,17 +207,21 @@ public class TerminosCondicionesController {
 
     @Operation(
         summary = "Subir y registrar nueva versión en S3 (Admin)",
-        description = "Carga un nuevo archivo PDF a S3/R2 y lo registra con número de versión y título."
+        description = "Carga un nuevo archivo PDF a S3/R2 y lo registra con número de versión, tipo y textos dinámicos."
     )
     @PostMapping(value = "/admin", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TerminosCondicionesResponse> subirVersion(
         @RequestParam("archivo") MultipartFile archivo,
+        @RequestParam(value = "idTipoDocumento", required = false) Long idTipoDocumento,
         @RequestParam(value = "titulo", required = false) String titulo,
-        @RequestParam(value = "version", required = false, defaultValue = "v1.0") String version,
+        @RequestParam(value = "version", required = false, defaultValue = "1.0") String version,
+        @RequestParam(value = "texto", required = false) String texto,
+        @RequestParam(value = "linkTexto", required = false) String linkTexto,
+        @RequestParam(value = "textoAgrupado", required = false) String textoAgrupado,
         @RequestParam(value = "activar", required = false, defaultValue = "false") boolean activar
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(terminosService.subirYCrear(archivo, titulo, version, activar));
+            .body(terminosService.crear(idTipoDocumento, titulo, version, texto, linkTexto, textoAgrupado, archivo, activar));
     }
 
     @Operation(

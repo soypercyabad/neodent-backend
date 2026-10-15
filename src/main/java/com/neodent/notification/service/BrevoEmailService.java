@@ -188,6 +188,7 @@ public class BrevoEmailService implements EmailService {
         context.setVariable("especialidad", data.especialidad());
         context.setVariable("sede", data.sede());
         context.setVariable("motivo", data.motivo());
+        context.setVariable("ctaUrl", data.ctaUrl());
 
         String html = templateEngine.process("email/" + AppConstants.PlantillasEmail.CITA_CANCELADA, context);
         enviar(destinatario, "Tu cita fue cancelada - NeoDent", html);

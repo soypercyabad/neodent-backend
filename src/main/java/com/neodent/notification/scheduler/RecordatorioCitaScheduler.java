@@ -35,7 +35,7 @@ public class RecordatorioCitaScheduler {
     private final EmailService emailService;
     private final Clock clock;
 
-    @Value("${app.frontend.url:http://localhost:5173}")
+    @Value("${app.frontend-url:${app.frontend.url:http://localhost:5173}}")
     private String frontendUrl;
 
     /**
@@ -106,7 +106,7 @@ public class RecordatorioCitaScheduler {
                 TipoNotificacion.RECORDATORIO_CITA,
                 "Recordatorio de cita próxima",
                 mensaje,
-                "/mis-citas",
+                "/mis-citas/" + cita.getId(),
                 "CITA",
                 cita.getId()
             );
@@ -121,7 +121,7 @@ public class RecordatorioCitaScheduler {
                 nombreOdontologo,
                 especialidad,
                 sede,
-                frontendUrl + "/login?redirect=/mis-citas"
+                frontendUrl + "/login?redirect=/mis-citas/" + cita.getId()
             );
 
             emailService.enviarRecordatorioCita(paciente.getCorreo(), emailData);

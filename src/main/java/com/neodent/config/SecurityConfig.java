@@ -58,6 +58,8 @@ public class SecurityConfig {
                     "/api/auth/**",
                     "/api/terminos-condiciones",
                     "/api/terminos-condiciones/info",
+                    "/api/terminos-condiciones/tipos",
+                    "/api/terminos-condiciones/archivo/**",
                     "/api/terminos-condiciones/*/ver",
                     "/api/terminos-condiciones/admin/*/ver"
                 ).permitAll()

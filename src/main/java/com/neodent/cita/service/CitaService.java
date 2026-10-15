@@ -217,7 +217,7 @@ public class CitaService {
             ctaUrl = invitacion.activationUrl();
         } else {
             ctaTexto = "VER MI PROGRAMACIÓN";
-            ctaUrl = frontendUrl + "/login?redirect=/mis-citas";
+            ctaUrl = frontendUrl + "/login?redirect=/mis-citas/" + cita.getId();
         }
 
         var odontologoEspecialidad = cita.getOdontologoEspecialidad();
@@ -463,6 +463,9 @@ public class CitaService {
 
         cita.setEstado(estadoCancelada);
         cita.setConfirmadaEn(null);
+        if (request.motivo() != null && !request.motivo().isBlank()) {
+            cita.setMotivo(request.motivo().trim());
+        }
 
         Cita citaGuardada = citaRepository.save(cita);
 
@@ -503,7 +506,7 @@ public class CitaService {
                     TipoNotificacion.CANCELACION_CITA,
                     "Cita cancelada",
                     mensaje,
-                    "/mis-citas",
+                    "/mis-citas/" + citaGuardada.getId(),
                     "CITA",
                     citaGuardada.getId()
                 );
@@ -562,6 +565,9 @@ public class CitaService {
 
         cita.setEstado(estadoNoAsistio);
         cita.setConfirmadaEn(null);
+        if (request.motivo() != null && !request.motivo().isBlank()) {
+            cita.setMotivo(request.motivo().trim());
+        }
 
         Cita citaGuardada = citaRepository.save(cita);
 
@@ -864,7 +870,7 @@ public class CitaService {
             odontologoEspecialidad.getEspecialidad().getNombre(),
             cita.getSede().getNombre(),
             motivo,
-            frontendUrl + "/login?redirect=/mis-citas"
+            frontendUrl + "/login?redirect=/mis-citas/" + cita.getId()
         );
 
         emailService.enviarCitaReprogramada(paciente.getCorreo(), data);
@@ -883,6 +889,8 @@ public class CitaService {
         DateTimeFormatter fecha = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         DateTimeFormatter hora = DateTimeFormatter.ofPattern("hh:mm a");
 
+        String ctaUrl = frontendUrl + "/login?redirect=/mis-citas/" + cita.getId();
+
         CitaCanceladaEmailData data = new CitaCanceladaEmailData(
             construirNombre(paciente.getNombres(), paciente.getApellidoPaterno(), paciente.getApellidoMaterno()),
             fechaAnterior.format(fecha),
@@ -890,7 +898,8 @@ public class CitaService {
             construirNombre(personal.getNombres(), personal.getApellidoPaterno(), personal.getApellidoMaterno()),
             odontologoEspecialidad.getEspecialidad().getNombre(),
             cita.getSede().getNombre(),
-            motivo
+            motivo,
+            ctaUrl
         );
 
         emailService.enviarCitaCancelada(paciente.getCorreo(), data);
@@ -1072,7 +1081,7 @@ public class CitaService {
             cita.getFechaHoraInicio(),
             cita.getFechaHoraFin(),
 
-            cita.getMotivo(),
+            obtenerMotivoEfectivo(cita),
             cita.getObservaciones(),
             cita.getConfirmadaEn(),
 
@@ -1080,6 +1089,23 @@ public class CitaService {
             cita.getFechaCreacion(),
             cita.getFechaActualizacion()
         );
+    }
+
+    private String obtenerMotivoEfectivo(Cita cita) {
+        if (cita.getMotivo() != null && !cita.getMotivo().isBlank()) {
+            return cita.getMotivo();
+        }
+
+        if (cita.getId() != null) {
+            var historiales = historialCitaRepository.findByCitaIdOrderByFechaCreacionDesc(cita.getId());
+            for (var h : historiales) {
+                if (h.getMotivo() != null && !h.getMotivo().isBlank()) {
+                    return h.getMotivo();
+                }
+            }
+        }
+
+        return null;
     }
 
     private String nombreCompleto(String nombres, String apellidoPaterno, String apellidoMaterno) {
