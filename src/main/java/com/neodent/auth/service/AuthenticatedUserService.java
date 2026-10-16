@@ -56,6 +56,8 @@ public class AuthenticatedUserService {
                 m.getRuta(),
                 m.getIcono(),
                 m.getOrden(),
+                m.getIdModuloPadre(),
+                null,
                 m.getActivo()
             ))
             .toList();

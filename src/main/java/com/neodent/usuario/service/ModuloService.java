@@ -1,5 +1,6 @@
 package com.neodent.usuario.service;
 
+import com.neodent.shared.exception.BusinessException;
 import com.neodent.shared.exception.ConflictException;
 import com.neodent.shared.exception.ResourceNotFoundException;
 import com.neodent.usuario.dto.request.ModuloRequest;
@@ -96,8 +97,16 @@ public class ModuloService {
             throw new ConflictException("Ya existe un módulo con el código: " + codigo);
         }
 
-        if (moduloRepository.existsByRutaIgnoreCase(ruta)) {
+        if (ruta != null && moduloRepository.existsByRutaIgnoreCase(ruta)) {
             throw new ConflictException("Ya existe un módulo con la ruta: " + ruta);
+        }
+
+        if (request.idModuloPadre() != null) {
+            Modulo padre = moduloRepository.findById(request.idModuloPadre())
+                .orElseThrow(() -> new ResourceNotFoundException("El módulo padre especificado no existe: " + request.idModuloPadre()));
+            if (padre.getRuta() != null && !padre.getRuta().isBlank()) {
+                throw new BusinessException("No se puede asignar como padre a un módulo que tiene ruta (" + padre.getNombre() + "). Solo los módulos contenedores sin ruta pueden tener submódulos.");
+            }
         }
 
         Modulo modulo = new Modulo();
@@ -107,6 +116,7 @@ public class ModuloService {
         modulo.setRuta(ruta);
         modulo.setIcono(request.icono().trim());
         modulo.setOrden(request.orden());
+        modulo.setIdModuloPadre(request.idModuloPadre());
         modulo.setActivo(true);
 
         return toResponse(moduloRepository.save(modulo));
@@ -123,8 +133,26 @@ public class ModuloService {
             throw new ConflictException("Ya existe otro módulo con el código: " + codigo);
         }
 
-        if (moduloRepository.existsByRutaIgnoreCaseAndIdNot(ruta, id)) {
+        if (ruta != null && moduloRepository.existsByRutaIgnoreCaseAndIdNot(ruta, id)) {
             throw new ConflictException("Ya existe otro módulo con la ruta: " + ruta);
+        }
+
+        if (request.idModuloPadre() != null) {
+            if (request.idModuloPadre().equals(id)) {
+                throw new BusinessException("Un módulo no puede ser padre de sí mismo");
+            }
+            Modulo padre = moduloRepository.findById(request.idModuloPadre())
+                .orElseThrow(() -> new ResourceNotFoundException("El módulo padre especificado no existe: " + request.idModuloPadre()));
+            if (padre.getRuta() != null && !padre.getRuta().isBlank()) {
+                throw new BusinessException("No se puede asignar como padre a un módulo que tiene ruta (" + padre.getNombre() + "). Solo los módulos contenedores sin ruta pueden tener submódulos.");
+            }
+        }
+
+        if (ruta != null && !ruta.isBlank()) {
+            boolean tieneHijos = moduloRepository.existsByIdModuloPadre(id);
+            if (tieneHijos) {
+                throw new BusinessException("Este módulo contiene submódulos hijos. No puede tener una ruta de navegación; debe ser un contenedor agrupador.");
+            }
         }
 
         modulo.setCodigo(codigo);
@@ -133,6 +161,7 @@ public class ModuloService {
         modulo.setRuta(ruta);
         modulo.setIcono(request.icono().trim());
         modulo.setOrden(request.orden());
+        modulo.setIdModuloPadre(request.idModuloPadre());
 
         return toResponse(moduloRepository.save(modulo));
     }
@@ -171,6 +200,9 @@ public class ModuloService {
     }
 
     private String normalizarRuta(String ruta) {
+        if (ruta == null || ruta.isBlank()) {
+            return null;
+        }
         String r = ruta.trim().toLowerCase();
         if (!r.startsWith("/")) {
             r = "/" + r;
@@ -183,6 +215,13 @@ public class ModuloService {
     }
 
     private ModuloResponse toResponse(Modulo m) {
+        String nombrePadre = null;
+        if (m.getIdModuloPadre() != null) {
+            nombrePadre = moduloRepository.findById(m.getIdModuloPadre())
+                .map(Modulo::getNombre)
+                .orElse(null);
+        }
+
         return new ModuloResponse(
             m.getId(),
             m.getCodigo(),
@@ -191,6 +230,8 @@ public class ModuloService {
             m.getRuta(),
             m.getIcono(),
             m.getOrden(),
+            m.getIdModuloPadre(),
+            nombrePadre,
             m.getActivo()
         );
     }

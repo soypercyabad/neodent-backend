@@ -8,5 +8,7 @@ public record ModuloResponse(
     String ruta,
     String icono,
     Integer orden,
+    Integer idModuloPadre,
+    String nombreModuloPadre,
     Boolean activo
 ) {}

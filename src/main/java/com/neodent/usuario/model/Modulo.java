@@ -26,7 +26,7 @@ public class Modulo {
     @Column(name = "descripcion", length = 150)
     private String descripcion;
 
-    @Column(name = "ruta", nullable = false, unique = true, length = 80)
+    @Column(name = "ruta", length = 80)
     private String ruta;
 
     @Column(name = "icono", nullable = false, length = 30)
@@ -34,6 +34,9 @@ public class Modulo {
 
     @Column(name = "orden", nullable = false)
     private Integer orden;
+
+    @Column(name = "id_modulo_padre")
+    private Integer idModuloPadre;
 
     @Column(name = "activo", nullable = false)
     private Boolean activo;

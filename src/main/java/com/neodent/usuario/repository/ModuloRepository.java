@@ -29,6 +29,8 @@ public interface ModuloRepository extends JpaRepository<Modulo, Integer> {
 
     boolean existsByRutaIgnoreCaseAndIdNot(String ruta, Integer id);
 
+    boolean existsByIdModuloPadre(Integer idModuloPadre);
+
     @Query(
         value = """
             SELECT m
@@ -38,7 +40,7 @@ public interface ModuloRepository extends JpaRepository<Modulo, Integer> {
                 :buscar IS NULL OR :buscar = '' OR
                 LOWER(m.nombre) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
                 LOWER(m.codigo) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                LOWER(m.ruta) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
+                LOWER(COALESCE(m.ruta, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
                 LOWER(COALESCE(m.descripcion, '')) LIKE LOWER(CONCAT('%', :buscar, '%'))
               )
         """,
@@ -50,7 +52,7 @@ public interface ModuloRepository extends JpaRepository<Modulo, Integer> {
                 :buscar IS NULL OR :buscar = '' OR
                 LOWER(m.nombre) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
                 LOWER(m.codigo) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
-                LOWER(m.ruta) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
+                LOWER(COALESCE(m.ruta, '')) LIKE LOWER(CONCAT('%', :buscar, '%')) OR
                 LOWER(COALESCE(m.descripcion, '')) LIKE LOWER(CONCAT('%', :buscar, '%'))
               )
         """

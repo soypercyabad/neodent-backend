@@ -18,7 +18,6 @@ public record ModuloRequest(
     @Size(max = 150, message = "La descripción no debe superar 150 caracteres")
     String descripcion,
 
-    @NotBlank(message = "La ruta es obligatoria")
     @Size(max = 80, message = "La ruta no debe superar 80 caracteres")
     String ruta,
 
@@ -27,5 +26,7 @@ public record ModuloRequest(
     String icono,
 
     @NotNull(message = "El orden es obligatorio")
-    Integer orden
+    Integer orden,
+
+    Integer idModuloPadre
 ) {}
