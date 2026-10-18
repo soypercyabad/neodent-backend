@@ -5,15 +5,11 @@ import com.neodent.legal.dto.TerminoPendienteDto;
 import com.neodent.legal.dto.TerminosCondicionesResponse;
 import com.neodent.legal.dto.TerminosPendientesResponse;
 import com.neodent.legal.model.AceptacionDocumentoLegal;
-import com.neodent.legal.model.AceptacionTerminos;
 import com.neodent.legal.model.DocumentoLegal;
 import com.neodent.legal.model.DocumentoLegalVersion;
-import com.neodent.legal.model.TerminosCondiciones;
 import com.neodent.legal.repository.AceptacionDocumentoLegalRepository;
-import com.neodent.legal.repository.AceptacionTerminosRepository;
 import com.neodent.legal.repository.DocumentoLegalRepository;
 import com.neodent.legal.repository.DocumentoLegalVersionRepository;
-import com.neodent.legal.repository.TerminosCondicionesRepository;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.paciente.repository.PacienteRepository;
 import com.neodent.personal.model.Personal;
@@ -35,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -51,8 +46,6 @@ public class TerminosCondicionesService {
     public static final String CLAVE_S3_DEFECTO = "documentos/legales/terminos-y-condiciones.pdf";
     private static final long MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
-    private final TerminosCondicionesRepository repository;
-    private final AceptacionTerminosRepository aceptacionRepository;
     private final DocumentoLegalRepository docLegalRepository;
     private final DocumentoLegalVersionRepository docVersionRepository;
     private final AceptacionDocumentoLegalRepository aceptacionDocRepository;
@@ -142,12 +135,7 @@ public class TerminosCondicionesService {
 
     @Transactional(readOnly = true)
     public List<TerminosCondicionesResponse> listarTodos() {
-        if (docVersionRepository.count() > 0) {
-            return docVersionRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaCreacion")).stream()
-                .map(this::mapearResponse)
-                .toList();
-        }
-        return repository.findAllByOrderByFechaCreacionDesc().stream()
+        return docVersionRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaCreacion")).stream()
             .map(this::mapearResponse)
             .toList();
     }
@@ -155,13 +143,7 @@ public class TerminosCondicionesService {
     @Transactional(readOnly = true)
     public Page<TerminosCondicionesResponse> listarVersionesPaginado(String buscar, Boolean activo, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "fechaCreacion"));
-
-        if (docVersionRepository.count() > 0) {
-            return docVersionRepository.buscarVersionesPaginado(buscar, activo, pageable)
-                .map(this::mapearResponse);
-        }
-
-        return repository.buscarPaginado(buscar, activo, pageable)
+        return docVersionRepository.buscarVersionesPaginado(buscar, activo, pageable)
             .map(this::mapearResponse);
     }
 
@@ -220,7 +202,6 @@ public class TerminosCondicionesService {
                         docVersionRepository.save(p);
                     }
                 }
-                desactivarTodas(tit);
             }
 
             String txt = (texto != null && !texto.isBlank()) ? texto.trim() : "Acepto los {0} de NeoDent.";
@@ -239,19 +220,6 @@ public class TerminosCondicionesService {
             );
             DocumentoLegalVersion guardada = docVersionRepository.save(nuevaVersion);
 
-            // Sincronizar en tabla legacy para compatibilidad
-            try {
-                TerminosCondiciones legacyDoc = new TerminosCondiciones();
-                legacyDoc.setTitulo(tit);
-                legacyDoc.setVersion(ver);
-                legacyDoc.setContenido(claveS3);
-                legacyDoc.setFechaPublicacion(LocalDateTime.now());
-                legacyDoc.setVigente(activar);
-                repository.save(legacyDoc);
-            } catch (Exception ex) {
-                log.debug("Legacy sync skip: {}", ex.getMessage());
-            }
-
             return mapearResponse(guardada);
         } catch (BusinessException ex) {
             throw ex;
@@ -266,54 +234,16 @@ public class TerminosCondicionesService {
 
     @Transactional
     public TerminosCondicionesResponse editar(Long id, String titulo, String version, MultipartFile nuevoArchivo, Boolean activar) {
-        // Intentar actualizar en DocumentoLegalVersion si existe
-        Optional<DocumentoLegalVersion> optV = docVersionRepository.findById(id);
-        if (optV.isPresent()) {
-            DocumentoLegalVersion v = optV.get();
-            String ver = (version == null || version.isBlank()) ? v.getVersion() : version.trim();
-            v.setVersion(ver);
+        DocumentoLegalVersion v = docVersionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Documento no encontrado con ID: " + id));
 
-            if (titulo != null && !titulo.isBlank()) {
-                v.getDocumentoLegal().setDescripcion(titulo.trim());
-                docLegalRepository.save(v.getDocumentoLegal());
-            }
+        String ver = (version == null || version.isBlank()) ? v.getVersion() : version.trim();
+        v.setVersion(ver);
 
-            if (nuevoArchivo != null && !nuevoArchivo.isEmpty()) {
-                validarArchivoPdf(nuevoArchivo);
-                String originalFilename = nuevoArchivo.getOriginalFilename() != null ? nuevoArchivo.getOriginalFilename() : NOMBRE_ARCHIVO_DEFECTO;
-                String sanitizedFilename = sanitizarNombre(originalFilename);
-                String nuevaClaveS3 = "documentos/legales/" + sanitizedFilename;
-
-                try {
-                    byte[] bytes = nuevoArchivo.getBytes();
-                    storageService.guardar(nuevaClaveS3, bytes, CONTENT_TYPE_PDF);
-                    v.setUrlDocumento(nuevaClaveS3);
-                    v.setNombreArchivo(sanitizedFilename);
-                } catch (IOException ex) {
-                    throw new BusinessException("No se pudo leer el nuevo archivo PDF: " + ex.getMessage());
-                }
-            }
-
-            if (Boolean.TRUE.equals(activar) && !Boolean.TRUE.equals(v.getActivo())) {
-                List<DocumentoLegalVersion> previas = docVersionRepository.findByDocumentoLegalIdOrderByFechaCreacionDesc(v.getDocumentoLegal().getId());
-                for (DocumentoLegalVersion p : previas) {
-                    p.setActivo(false);
-                    docVersionRepository.save(p);
-                }
-                v.setActivo(true);
-            }
-
-            return mapearResponse(docVersionRepository.save(v));
+        if (titulo != null && !titulo.isBlank()) {
+            v.getDocumentoLegal().setDescripcion(titulo.trim());
+            docLegalRepository.save(v.getDocumentoLegal());
         }
-
-        // Fallback a modelo legacy
-        TerminosCondiciones doc = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Documento no encontrado"));
-
-        String ver = (version == null || version.isBlank()) ? doc.getVersion() : version.trim();
-        String tit = (titulo == null || titulo.isBlank()) ? doc.getTitulo() : titulo.trim();
-        doc.setTitulo(tit);
-        doc.setVersion(ver);
 
         if (nuevoArchivo != null && !nuevoArchivo.isEmpty()) {
             validarArchivoPdf(nuevoArchivo);
@@ -324,95 +254,62 @@ public class TerminosCondicionesService {
             try {
                 byte[] bytes = nuevoArchivo.getBytes();
                 storageService.guardar(nuevaClaveS3, bytes, CONTENT_TYPE_PDF);
-                doc.setContenido(nuevaClaveS3);
+                v.setUrlDocumento(nuevaClaveS3);
+                v.setNombreArchivo(sanitizedFilename);
             } catch (IOException ex) {
                 throw new BusinessException("No se pudo leer el nuevo archivo PDF: " + ex.getMessage());
             }
         }
 
-        if (Boolean.TRUE.equals(activar) && !Boolean.TRUE.equals(doc.getVigente())) {
-            desactivarTodas(tit);
-            doc.setVigente(true);
+        if (Boolean.TRUE.equals(activar) && !Boolean.TRUE.equals(v.getActivo())) {
+            List<DocumentoLegalVersion> previas = docVersionRepository.findByDocumentoLegalIdOrderByFechaCreacionDesc(v.getDocumentoLegal().getId());
+            for (DocumentoLegalVersion p : previas) {
+                p.setActivo(false);
+                docVersionRepository.save(p);
+            }
+            v.setActivo(true);
         }
 
-        return mapearResponse(repository.save(doc));
+        return mapearResponse(docVersionRepository.save(v));
     }
 
     @Transactional
     public TerminosCondicionesResponse cambiarEstado(Long id, boolean activo) {
-        Optional<DocumentoLegalVersion> optV = docVersionRepository.findById(id);
-        if (optV.isPresent()) {
-            DocumentoLegalVersion v = optV.get();
-            if (!activo && Boolean.TRUE.equals(v.getActivo())) {
-                throw new BusinessException("No se puede desactivar directamente la versión oficial. Para cambiarla, activa otra versión.");
-            }
-            if (activo) {
-                List<DocumentoLegalVersion> previas = docVersionRepository.findByDocumentoLegalIdOrderByFechaCreacionDesc(v.getDocumentoLegal().getId());
-                for (DocumentoLegalVersion p : previas) {
-                    p.setActivo(false);
-                    docVersionRepository.save(p);
-                }
-                v.setActivo(true);
-            } else {
-                v.setActivo(false);
-            }
-            return mapearResponse(docVersionRepository.save(v));
-        }
+        DocumentoLegalVersion v = docVersionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Documento legal no encontrado con ID: " + id));
 
-        TerminosCondiciones doc = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Documento de términos no encontrado"));
-
-        if (!activo && Boolean.TRUE.equals(doc.getVigente())) {
+        if (!activo && Boolean.TRUE.equals(v.getActivo())) {
             throw new BusinessException("No se puede desactivar directamente la versión oficial. Para cambiarla, activa otra versión.");
         }
-
         if (activo) {
-            desactivarTodas(doc.getTitulo());
-            doc.setVigente(true);
+            List<DocumentoLegalVersion> previas = docVersionRepository.findByDocumentoLegalIdOrderByFechaCreacionDesc(v.getDocumentoLegal().getId());
+            for (DocumentoLegalVersion p : previas) {
+                p.setActivo(false);
+                docVersionRepository.save(p);
+            }
+            v.setActivo(true);
         } else {
-            doc.setVigente(false);
+            v.setActivo(false);
         }
-
-        return mapearResponse(repository.save(doc));
+        return mapearResponse(docVersionRepository.save(v));
     }
 
     @Transactional
     public void eliminar(Long id) {
-        Optional<DocumentoLegalVersion> optV = docVersionRepository.findById(id);
-        if (optV.isPresent()) {
-            DocumentoLegalVersion v = optV.get();
-            if (Boolean.TRUE.equals(v.getActivo())) {
-                throw new BusinessException("No se puede eliminar una versión activa.");
-            }
-            try {
-                if (storageService.existe(v.getUrlDocumento())) {
-                    storageService.eliminar(v.getUrlDocumento());
-                }
-            } catch (Exception ex) {
-                log.warn("Fallo al eliminar de S3: {}", ex.getMessage());
-            }
-            docVersionRepository.delete(v);
-            return;
+        DocumentoLegalVersion v = docVersionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Documento legal no encontrado con ID: " + id));
+
+        if (Boolean.TRUE.equals(v.getActivo())) {
+            throw new BusinessException("No se puede eliminar una versión activa.");
         }
-
-        TerminosCondiciones doc = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Documento de términos no encontrado"));
-
-        if (Boolean.TRUE.equals(doc.getVigente())) {
-            throw new BusinessException("No se puede eliminar la versión de términos que está actualmente activa.");
-        }
-
         try {
-            if (doc.getContenido() != null && doc.getContenido().startsWith("documentos/")) {
-                if (storageService.existe(doc.getContenido())) {
-                    storageService.eliminar(doc.getContenido());
-                }
+            if (storageService.existe(v.getUrlDocumento())) {
+                storageService.eliminar(v.getUrlDocumento());
             }
         } catch (Exception ex) {
-            log.warn("No se pudo eliminar archivo de S3: {}", ex.getMessage());
+            log.warn("Fallo al eliminar de S3: {}", ex.getMessage());
         }
-
-        repository.delete(doc);
+        docVersionRepository.delete(v);
     }
 
     /* =========================================================
@@ -421,12 +318,7 @@ public class TerminosCondicionesService {
 
     @Transactional(readOnly = true)
     public List<AceptacionTerminosResponse> listarAceptaciones() {
-        if (aceptacionDocRepository.count() > 0) {
-            return aceptacionDocRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaCreacion")).stream()
-                .map(this::mapearAceptacion)
-                .toList();
-        }
-        return aceptacionRepository.findAllWithUsuarioAndTerminos().stream()
+        return aceptacionDocRepository.findAll(Sort.by(Sort.Direction.DESC, "fechaCreacion")).stream()
             .map(this::mapearAceptacion)
             .toList();
     }
@@ -434,13 +326,7 @@ public class TerminosCondicionesService {
     @Transactional(readOnly = true)
     public Page<AceptacionTerminosResponse> listarAceptacionesPaginado(String buscar, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "fechaCreacion"));
-
-        if (aceptacionDocRepository.count() > 0) {
-            return aceptacionDocRepository.buscarAceptacionesPaginado(buscar, pageable)
-                .map(this::mapearAceptacion);
-        }
-
-        return aceptacionRepository.buscarPaginado(buscar, pageable)
+        return aceptacionDocRepository.buscarAceptacionesPaginado(buscar, pageable)
             .map(this::mapearAceptacion);
     }
 
@@ -449,17 +335,17 @@ public class TerminosCondicionesService {
         String tipoDoc = "DNI";
         String numeroDoc = "-";
 
-        Optional<Paciente> pacienteOpt = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId);
-        if (pacienteOpt.isPresent()) {
-            Paciente p = pacienteOpt.get();
+        Optional<Paciente> paciente = pacienteRepository.findByUsuarioId(usuarioId);
+        if (paciente.isPresent()) {
+            Paciente p = paciente.get();
             numeroDoc = p.getNumeroDocumento() != null ? p.getNumeroDocumento() : "-";
             if (p.getTipoDocumento() != null && p.getTipoDocumento().getCodigo() != null) {
                 tipoDoc = p.getTipoDocumento().getCodigo();
             }
         } else {
-            Optional<Personal> personalOpt = personalRepository.findByUsuarioId(usuarioId);
-            if (personalOpt.isPresent()) {
-                Personal pers = personalOpt.get();
+            Optional<Personal> personal = personalRepository.findByUsuarioId(usuarioId);
+            if (personal.isPresent()) {
+                Personal pers = personal.get();
                 numeroDoc = pers.getNumeroDocumento() != null ? pers.getNumeroDocumento() : "-";
                 if (pers.getTipoDocumento() != null && pers.getTipoDocumento().getCodigo() != null) {
                     tipoDoc = pers.getTipoDocumento().getCodigo();
@@ -467,50 +353,20 @@ public class TerminosCondicionesService {
             }
         }
 
+        String titulo = (a.getVersion() != null && a.getVersion().getDocumentoLegal() != null)
+            ? a.getVersion().getDocumentoLegal().getDescripcion()
+            : "Términos y Condiciones";
+        String versionStr = (a.getVersion() != null) ? a.getVersion().getVersion() : "1.0";
+
         return new AceptacionTerminosResponse(
             a.getId(),
             tipoDoc,
             numeroDoc,
-            a.getVersion().getDocumentoLegal().getDescripcion(),
-            a.getVersion().getVersion(),
+            titulo,
+            versionStr,
             a.getDireccionIp(),
             a.getAgenteUsuario(),
             a.getFechaCreacion()
-        );
-    }
-
-    private AceptacionTerminosResponse mapearAceptacion(AceptacionTerminos a) {
-        Long usuarioId = a.getUsuario().getId();
-        String tipoDoc = "DNI";
-        String numeroDoc = "-";
-
-        Optional<Paciente> pacienteOpt = pacienteRepository.findByUsuarioIdAndActivoTrue(usuarioId);
-        if (pacienteOpt.isPresent()) {
-            Paciente p = pacienteOpt.get();
-            numeroDoc = p.getNumeroDocumento() != null ? p.getNumeroDocumento() : "-";
-            if (p.getTipoDocumento() != null && p.getTipoDocumento().getCodigo() != null) {
-                tipoDoc = p.getTipoDocumento().getCodigo();
-            }
-        } else {
-            Optional<Personal> personalOpt = personalRepository.findByUsuarioId(usuarioId);
-            if (personalOpt.isPresent()) {
-                Personal pers = personalOpt.get();
-                numeroDoc = pers.getNumeroDocumento() != null ? pers.getNumeroDocumento() : "-";
-                if (pers.getTipoDocumento() != null && pers.getTipoDocumento().getCodigo() != null) {
-                    tipoDoc = pers.getTipoDocumento().getCodigo();
-                }
-            }
-        }
-
-        return new AceptacionTerminosResponse(
-            a.getId(),
-            tipoDoc,
-            numeroDoc,
-            a.getTerminos().getTitulo(),
-            a.getTerminos().getVersion(),
-            a.getIp(),
-            a.getAgenteUsuario(),
-            a.getAceptadoEn()
         );
     }
 
@@ -520,18 +376,13 @@ public class TerminosCondicionesService {
 
     @Transactional(readOnly = true)
     public byte[] obtenerPdfPorId(Long id) {
-        Optional<DocumentoLegalVersion> optV = docVersionRepository.findById(id);
-        if (optV.isPresent()) {
-            String clave = optV.get().getUrlDocumento();
-            if (storageService.existe(clave)) {
-                return storageService.obtener(clave);
-            }
+        DocumentoLegalVersion v = docVersionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Documento no encontrado con ID: " + id));
+        String clave = v.getUrlDocumento();
+        if (storageService.existe(clave)) {
+            return storageService.obtener(clave);
         }
-
-        TerminosCondiciones doc = repository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Documento de términos no encontrado"));
-
-        return resolverBytesDocumento(doc);
+        throw new ResourceNotFoundException("Archivo PDF no encontrado en almacenamiento para ID: " + id);
     }
 
     @Transactional(readOnly = true)
@@ -547,23 +398,10 @@ public class TerminosCondicionesService {
             }
         }
 
-        var opt = repository.findFirstByVigenteTrueOrderByFechaPublicacionDesc();
-        if (opt.isPresent()) {
-            try {
-                return resolverBytesDocumento(opt.get());
-            } catch (Exception ex) {
-                log.warn("Fallo al obtener versión activa desde S3: {}", ex.getMessage());
-            }
-        }
-
         if (storageService.existe(CLAVE_S3_DEFECTO)) {
             try {
                 return storageService.obtener(CLAVE_S3_DEFECTO);
             } catch (Exception ignored) {}
-        }
-
-        if (opt.isPresent() && opt.get().getContenido() != null) {
-            return opt.get().getContenido().getBytes(StandardCharsets.UTF_8);
         }
 
         throw new ResourceNotFoundException("No hay documento de términos y condiciones disponible actualmente");
@@ -595,26 +433,7 @@ public class TerminosCondicionesService {
             }
         }
 
-        // 2. Buscar en terminos_condiciones (legacy)
-        List<TerminosCondiciones> todosLegacy = repository.findAll();
-        Optional<TerminosCondiciones> coincidencia = todosLegacy.stream()
-            .filter(doc -> {
-                if (doc.getContenido() == null) return false;
-                String contenido = doc.getContenido();
-                String nombreReal = contenido.contains("/")
-                    ? contenido.substring(contenido.lastIndexOf('/') + 1)
-                    : contenido;
-                return nombreReal.equalsIgnoreCase(filename)
-                    || contenido.equalsIgnoreCase(filename)
-                    || contenido.endsWith("/" + filename);
-            })
-            .findFirst();
-
-        if (coincidencia.isPresent()) {
-            return resolverBytesDocumento(coincidencia.get());
-        }
-
-        // 3. Buscar directo en la carpeta S3
+        // 2. Buscar directo en la carpeta S3
         String claveDirecta = "documentos/legales/" + filename;
         if (storageService.existe(claveDirecta)) {
             try {
@@ -630,23 +449,17 @@ public class TerminosCondicionesService {
     @Transactional(readOnly = true)
     public String obtenerNombreArchivoDescargaActivo() {
         var optV = docVersionRepository.findFirstByDocumentoLegalCodigoAndActivoTrueOrderByFechaCreacionDesc("TERMINOS_CONDICIONES");
-        if (optV.isPresent()) {
-            return optV.get().getNombreArchivo();
+        if (optV.isEmpty()) {
+            optV = docVersionRepository.findByActivoTrueOrderByFechaCreacionDesc().stream().findFirst();
         }
-        return repository.findFirstByVigenteTrueOrderByFechaPublicacionDesc()
-            .map(doc -> generarNombreLimpio(doc.getTitulo()))
-            .orElse(NOMBRE_ARCHIVO_DEFECTO);
+        return optV.map(DocumentoLegalVersion::getNombreArchivo).orElse(NOMBRE_ARCHIVO_DEFECTO);
     }
 
     @Transactional(readOnly = true)
     public String obtenerNombreArchivoDescargaPorId(Long id) {
-        Optional<DocumentoLegalVersion> optV = docVersionRepository.findById(id);
-        if (optV.isPresent()) {
-            return optV.get().getNombreArchivo();
-        }
-        return repository.findById(id)
-            .map(doc -> generarNombreLimpio(doc.getTitulo()))
-            .orElse("terminos_y_condiciones.pdf");
+        return docVersionRepository.findById(id)
+            .map(DocumentoLegalVersion::getNombreArchivo)
+            .orElse(NOMBRE_ARCHIVO_DEFECTO);
     }
 
     public static String generarNombreLimpio(String titulo) {
@@ -669,11 +482,6 @@ public class TerminosCondicionesService {
 
         if (optV.isPresent()) {
             return mapearResponse(optV.get());
-        }
-
-        var opt = repository.findFirstByVigenteTrueOrderByFechaPublicacionDesc();
-        if (opt.isPresent()) {
-            return mapearResponse(opt.get());
         }
 
         String urlS3Directa = storageService.obtenerUrl(CLAVE_S3_DEFECTO);
@@ -704,62 +512,28 @@ public class TerminosCondicionesService {
     public TerminosPendientesResponse verificarPendiente(Long usuarioId) {
         List<DocumentoLegalVersion> activas = docVersionRepository.findByActivoTrueOrderByFechaCreacionDesc();
 
-        if (!activas.isEmpty()) {
-            List<TerminoPendienteDto> pendientes = new java.util.ArrayList<>();
-            java.util.Set<Long> tiposVistos = new java.util.HashSet<>();
-
-            for (DocumentoLegalVersion v : activas) {
-                Long tipoId = v.getDocumentoLegal().getId();
-                if (tiposVistos.add(tipoId)) {
-                    boolean yaAcepto = aceptacionDocRepository.existsByUsuarioIdAndVersionId(usuarioId, v.getId());
-                    if (!yaAcepto) {
-                        pendientes.add(new TerminoPendienteDto(
-                            v.getId(),
-                            v.getDocumentoLegal().getCodigo(),
-                            v.getDocumentoLegal().getDescripcion(),
-                            v.getVersion(),
-                            v.getNombreArchivo(),
-                            v.getTexto(),
-                            v.getLinkTexto(),
-                            v.getTextoAgrupado(),
-                            "/terminos/" + v.getNombreArchivo()
-                        ));
-                    }
-                }
-            }
-
-            return new TerminosPendientesResponse(!pendientes.isEmpty(), pendientes);
-        }
-
-        // Fallback a modelo legacy
-        List<TerminosCondiciones> legacyActivos = repository.findByVigenteTrueOrderByFechaPublicacionDesc();
-        if (legacyActivos.isEmpty()) {
+        if (activas.isEmpty()) {
             return new TerminosPendientesResponse(false, List.of());
         }
 
         List<TerminoPendienteDto> pendientes = new java.util.ArrayList<>();
-        java.util.Set<String> titulosVistos = new java.util.HashSet<>();
+        java.util.Set<Long> tiposVistos = new java.util.HashSet<>();
 
-        for (TerminosCondiciones doc : legacyActivos) {
-            String claveTipo = doc.getTitulo() != null ? doc.getTitulo().trim().toLowerCase() : "default";
-            if (titulosVistos.add(claveTipo)) {
-                boolean yaAcepto = aceptacionRepository.existsByUsuarioIdAndTerminosId(usuarioId, doc.getId());
+        for (DocumentoLegalVersion v : activas) {
+            Long tipoId = v.getDocumentoLegal().getId();
+            if (tiposVistos.add(tipoId)) {
+                boolean yaAcepto = aceptacionDocRepository.existsByUsuarioIdAndVersionId(usuarioId, v.getId());
                 if (!yaAcepto) {
-                    String clave = doc.getContenido() != null ? doc.getContenido() : "";
-                    String nombreArchivo = clave.contains("/")
-                        ? clave.substring(clave.lastIndexOf('/') + 1)
-                        : (clave.isBlank() ? NOMBRE_ARCHIVO_DEFECTO : clave);
-
                     pendientes.add(new TerminoPendienteDto(
-                        doc.getId(),
-                        "TERMINOS_CONDICIONES",
-                        doc.getTitulo(),
-                        doc.getVersion(),
-                        nombreArchivo,
-                        "Acepto los {0} de NeoDent.",
-                        "Términos y condiciones",
-                        "los {0} de NeoDent",
-                        "/terminos/" + nombreArchivo
+                        v.getId(),
+                        v.getDocumentoLegal().getCodigo(),
+                        v.getDocumentoLegal().getDescripcion(),
+                        v.getVersion(),
+                        v.getNombreArchivo(),
+                        v.getTexto(),
+                        v.getLinkTexto(),
+                        v.getTextoAgrupado(),
+                        "/terminos/" + v.getNombreArchivo()
                     ));
                 }
             }
@@ -809,76 +583,21 @@ public class TerminosCondicionesService {
             }
         }
 
-        // Si terminosId no se envió o no es de la nueva tabla, buscar por defecto o guardar todas las activas
+        // Si terminosId no se envió o no es específico, guardar todas las versiones activas pendientes
         List<DocumentoLegalVersion> activas = docVersionRepository.findByActivoTrueOrderByFechaCreacionDesc();
-        if (!activas.isEmpty()) {
-            for (DocumentoLegalVersion v : activas) {
-                if (!aceptacionDocRepository.existsByUsuarioIdAndVersionId(usuarioId, v.getId())) {
-                    AceptacionDocumentoLegal adl = new AceptacionDocumentoLegal(
-                        v,
-                        usuario,
-                        true,
-                        "Web",
-                        ip,
-                        userAgent
-                    );
-                    aceptacionDocRepository.save(adl);
-                }
+        for (DocumentoLegalVersion v : activas) {
+            if (!aceptacionDocRepository.existsByUsuarioIdAndVersionId(usuarioId, v.getId())) {
+                AceptacionDocumentoLegal adl = new AceptacionDocumentoLegal(
+                    v,
+                    usuario,
+                    true,
+                    "Web",
+                    ip,
+                    userAgent
+                );
+                aceptacionDocRepository.save(adl);
             }
-            return;
         }
-
-        // Fallback a modelo legacy
-        TerminosCondiciones terminos;
-        if (terminosId != null) {
-            terminos = repository.findById(terminosId)
-                .orElseThrow(() -> new ResourceNotFoundException("Versión de términos no encontrada con ID: " + terminosId));
-        } else {
-            terminos = repository.findFirstByVigenteTrueOrderByFechaPublicacionDesc()
-                .orElseThrow(() -> new BusinessException("No hay una versión de términos activa para aceptar"));
-        }
-
-        if (aceptacionRepository.existsByUsuarioIdAndTerminosId(usuarioId, terminos.getId())) {
-            return;
-        }
-
-        AceptacionTerminos aceptacion = new AceptacionTerminos();
-        aceptacion.setUsuario(usuario);
-        aceptacion.setTerminos(terminos);
-        aceptacion.setAceptadoEn(LocalDateTime.now());
-        aceptacion.setIp(ip);
-        aceptacion.setAgenteUsuario(userAgent != null && userAgent.length() > 255 ? userAgent.substring(0, 255) : userAgent);
-        aceptacionRepository.save(aceptacion);
-    }
-
-    private void desactivarTodas(String titulo) {
-        try {
-            List<TerminosCondiciones> todas = repository.findAll();
-            for (TerminosCondiciones t : todas) {
-                if (Boolean.TRUE.equals(t.getVigente())) {
-                    if (titulo == null || t.getTitulo() == null || t.getTitulo().trim().equalsIgnoreCase(titulo.trim())) {
-                        t.setVigente(false);
-                    }
-                }
-            }
-            repository.saveAll(todas);
-        } catch (Exception ex) {
-            log.warn("Fallo al desactivar versiones anteriores del mismo tipo: {}", ex.getMessage());
-        }
-    }
-
-    private byte[] resolverBytesDocumento(TerminosCondiciones doc) {
-        String contenido = doc.getContenido();
-        if (contenido != null && storageService.existe(contenido)) {
-            return storageService.obtener(contenido);
-        }
-        if (storageService.existe(CLAVE_S3_DEFECTO)) {
-            return storageService.obtener(CLAVE_S3_DEFECTO);
-        }
-        if (contenido != null) {
-            return contenido.getBytes(StandardCharsets.UTF_8);
-        }
-        throw new ResourceNotFoundException("Archivo de términos no encontrado en almacenamiento");
     }
 
     public TerminosCondicionesResponse mapearResponse(DocumentoLegalVersion v) {
@@ -903,31 +622,6 @@ public class TerminosCondicionesService {
             urlS3Directa,
             v.getFechaCreacion(),
             v.getFechaCreacion()
-        );
-    }
-
-    private TerminosCondicionesResponse mapearResponse(TerminosCondiciones doc) {
-        String clave = doc.getContenido() != null ? doc.getContenido() : CLAVE_S3_DEFECTO;
-        String nombreArchivo = clave.contains("/") ? clave.substring(clave.lastIndexOf('/') + 1) : NOMBRE_ARCHIVO_DEFECTO;
-        String urlS3Directa = storageService.obtenerUrl(clave);
-        String urlVisualizar = "/terminos/" + nombreArchivo;
-
-        return new TerminosCondicionesResponse(
-            doc.getId(),
-            "TERMINOS_CONDICIONES",
-            doc.getTitulo(),
-            doc.getVersion(),
-            nombreArchivo,
-            clave,
-            "Acepto los {0} de NeoDent.",
-            "Términos y condiciones",
-            "los {0} de NeoDent",
-            0L,
-            Boolean.TRUE.equals(doc.getVigente()),
-            urlVisualizar,
-            urlS3Directa,
-            doc.getFechaPublicacion(),
-            doc.getFechaCreacion() != null ? doc.getFechaCreacion() : doc.getFechaPublicacion()
         );
     }
 

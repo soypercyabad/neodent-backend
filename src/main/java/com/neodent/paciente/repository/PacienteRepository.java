@@ -25,6 +25,9 @@ public interface PacienteRepository
     @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado", "sedeRegistro"})
     Optional<Paciente> findByUsuarioIdAndActivoTrue(Long usuarioId);
 
+    @EntityGraph(attributePaths = {"tipoDocumento", "usuario", "usuario.estado", "sedeRegistro"})
+    Optional<Paciente> findByUsuarioId(Long usuarioId);
+
     boolean existsByTipoDocumentoCodigoAndNumeroDocumento(String codigo, String numeroDocumento);
 
     boolean existsByCorreoIgnoreCase(String correo);

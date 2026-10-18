@@ -14,10 +14,10 @@ import com.neodent.auth.dto.response.VerifyEmailResponse;
 import com.neodent.auth.model.CodigoVerificacion;
 import com.neodent.dni.DniService;
 import com.neodent.dni.dto.DniResponse;
-import com.neodent.dni.util.DniDataMasker;
-import com.neodent.legal.model.AceptacionTerminos;
-import com.neodent.legal.repository.AceptacionTerminosRepository;
-import com.neodent.legal.repository.TerminosCondicionesRepository;
+import com.neodent.legal.model.AceptacionDocumentoLegal;
+import com.neodent.legal.model.DocumentoLegalVersion;
+import com.neodent.legal.repository.AceptacionDocumentoLegalRepository;
+import com.neodent.legal.repository.DocumentoLegalVersionRepository;
 import com.neodent.paciente.dto.CrearPacienteRequest;
 import com.neodent.paciente.model.Paciente;
 import com.neodent.paciente.model.TipoDocumento;
@@ -41,8 +41,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.neodent.dni.util.DniDataMasker;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 
 @Slf4j
@@ -51,8 +53,8 @@ import java.util.Locale;
 public class PatientRegistrationService {
 
     private final PacienteRepository pacienteRepository;
-    private final AceptacionTerminosRepository aceptacionTerminosRepository;
-    private final TerminosCondicionesRepository terminosCondicionesRepository;
+    private final AceptacionDocumentoLegalRepository aceptacionDocumentoLegalRepository;
+    private final DocumentoLegalVersionRepository documentoLegalVersionRepository;
     private final TipoDocumentoRepository tipoDocumentoRepository;
     private final DniService dniService;
     private final TurnstileService turnstileService;
@@ -720,58 +722,55 @@ public class PatientRegistrationService {
 
     private void registrarAceptacion(Usuario usuario) {
         try {
-            terminosCondicionesRepository
-                .findFirstByVigenteTrueOrderByFechaPublicacionDesc()
-                .ifPresent(terminos -> {
-                    if (
-                        !aceptacionTerminosRepository
-                            .existsByUsuarioIdAndTerminosId(
-                                usuario.getId(),
-                                terminos.getId()
-                            )
-                    ) {
-                        AceptacionTerminos aceptacion =
-                            new AceptacionTerminos();
+            List<DocumentoLegalVersion> activas = documentoLegalVersionRepository
+                .findByActivoTrueOrderByFechaCreacionDesc();
 
-                        aceptacion.setUsuario(usuario);
-                        aceptacion.setTerminos(terminos);
-                        aceptacion.setAceptadoEn(
-                            LocalDateTime.now()
-                        );
+            if (activas.isEmpty()) {
+                return;
+            }
 
-                        try {
-                            org.springframework.web.context.request.RequestAttributes attrs =
-                                org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
-                            if (attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra) {
-                                jakarta.servlet.http.HttpServletRequest req = sra.getRequest();
-                                String ip = req.getHeader("X-Forwarded-For");
-                                if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
-                                    ip = req.getHeader("X-Real-IP");
-                                }
-                                if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
-                                    ip = req.getRemoteAddr();
-                                } else if (ip.contains(",")) {
-                                    ip = ip.split(",")[0].trim();
-                                }
-                                aceptacion.setIp(ip);
-
-                                String ua = req.getHeader("User-Agent");
-                                if (ua != null && ua.length() > 255) {
-                                    ua = ua.substring(0, 255);
-                                }
-                                aceptacion.setAgenteUsuario(ua);
-                            }
-                        } catch (Exception exReq) {
-                            log.debug("No se pudo obtener IP o User-Agent en registro: {}", exReq.getMessage());
-                        }
-
-                        aceptacionTerminosRepository
-                            .save(aceptacion);
+            String ip = null;
+            String ua = null;
+            try {
+                org.springframework.web.context.request.RequestAttributes attrs =
+                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+                if (attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra) {
+                    jakarta.servlet.http.HttpServletRequest req = sra.getRequest();
+                    ip = req.getHeader("X-Forwarded-For");
+                    if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                        ip = req.getHeader("X-Real-IP");
                     }
-                });
+                    if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
+                        ip = req.getRemoteAddr();
+                    } else if (ip.contains(",")) {
+                        ip = ip.split(",")[0].trim();
+                    }
+
+                    ua = req.getHeader("User-Agent");
+                    if (ua != null && ua.length() > 500) {
+                        ua = ua.substring(0, 500);
+                    }
+                }
+            } catch (Exception exReq) {
+                log.debug("No se pudo obtener IP o User-Agent en registro: {}", exReq.getMessage());
+            }
+
+            for (DocumentoLegalVersion version : activas) {
+                if (!aceptacionDocumentoLegalRepository.existsByUsuarioIdAndVersionId(usuario.getId(), version.getId())) {
+                    AceptacionDocumentoLegal aceptacion = new AceptacionDocumentoLegal(
+                        version,
+                        usuario,
+                        true,
+                        "Registro",
+                        ip,
+                        ua
+                    );
+                    aceptacionDocumentoLegalRepository.save(aceptacion);
+                }
+            }
         } catch (Exception ex) {
             log.warn(
-                "No se pudo registrar aceptación de términos para usuario {}: {}",
+                "No se pudo registrar aceptación de documentos legales para usuario {}: {}",
                 usuario.getId(),
                 ex.getMessage()
             );
