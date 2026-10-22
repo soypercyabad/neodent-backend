@@ -70,6 +70,73 @@ public class SecurityConfig {
                     "/api/terminos-condiciones/aceptar"
                 ).authenticated()
 
+                /* Catálogo de condiciones del odontograma */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/odontograma/condiciones",
+                    "/api/odontograma/condiciones/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
+                )
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/odontograma/condiciones",
+                    "/api/odontograma/condiciones/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+
+                /* Historia clínica y Odontograma */
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/pacientes/*/historia-clinica",
+                    "/api/pacientes/*/historia-clinica/**",
+                    "/api/pacientes/*/odontograma",
+                    "/api/pacientes/*/odontograma/**",
+                    "/api/pacientes/*/documentos",
+                    "/api/pacientes/*/documentos/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.RECEPCIONISTA,
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
+                )
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/pacientes/*/historia-clinica",
+                    "/api/pacientes/*/historia-clinica/**",
+                    "/api/pacientes/*/odontograma",
+                    "/api/pacientes/*/odontograma/**",
+                    "/api/pacientes/*/documentos",
+                    "/api/pacientes/*/documentos/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
+                )
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/pacientes/*/historia-clinica",
+                    "/api/pacientes/*/historia-clinica/**",
+                    "/api/pacientes/*/odontograma/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.ODONTOLOGO,
+                    AppConstants.Roles.PACIENTE
+                )
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/api/pacientes/*/odontograma/**",
+                    "/api/pacientes/*/documentos/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+
                 /* Consulta de pacientes */
                 .requestMatchers(
                     HttpMethod.GET,
