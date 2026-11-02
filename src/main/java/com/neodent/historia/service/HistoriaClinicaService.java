@@ -1,5 +1,8 @@
 package com.neodent.historia.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.neodent.audit.AuditService;
 import com.neodent.cita.model.Cita;
 import com.neodent.cita.repository.CitaRepository;
 import com.neodent.historia.dto.EvolucionClinicaDto;
@@ -40,6 +43,8 @@ public class HistoriaClinicaService {
     private final PersonalRepository personalRepository;
     private final OdontologoRepository odontologoRepository;
     private final CitaRepository citaRepository;
+    private final AuditService auditService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional(readOnly = true)
     public Optional<HistoriaClinicaResponse> obtenerPorPacienteId(Long pacienteId) {
@@ -48,7 +53,7 @@ public class HistoriaClinicaService {
     }
 
     @Transactional
-    public HistoriaClinicaResponse crearHistoriaClinica(Long pacienteId, GuardarHistoriaClinicaRequest request) {
+    public HistoriaClinicaResponse crearHistoriaClinica(Long pacienteId, GuardarHistoriaClinicaRequest request, Long usuarioId, String ip) {
         if (historiaRepository.existsByPacienteId(pacienteId)) {
             throw new BusinessException("El paciente ya cuenta con una historia clínica registrada.");
         }
@@ -56,36 +61,78 @@ public class HistoriaClinicaService {
         Paciente paciente = pacienteRepository.findById(pacienteId)
             .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado con ID: " + pacienteId));
 
+        String antMed = request.antecedentesMedicos() != null ? request.antecedentesMedicos().trim() : request.antecedentes();
+
         HistoriaClinica nueva = new HistoriaClinica(
             paciente,
-            request.antecedentes() != null ? request.antecedentes().trim() : null,
+            antMed != null ? antMed.trim() : null,
             request.alergias() != null ? request.alergias().trim() : null,
             request.observacionesGenerales() != null ? request.observacionesGenerales().trim() : null
         );
 
+        nueva.setMotivoConsulta(request.motivoConsulta() != null ? request.motivoConsulta().trim() : null);
+        nueva.setEnfermedadActual(request.enfermedadActual() != null ? request.enfermedadActual().trim() : null);
+        nueva.setAntecedentesMedicos(antMed != null ? antMed.trim() : null);
+        nueva.setMedicamentosActuales(request.medicamentosActuales() != null ? request.medicamentosActuales().trim() : null);
+        nueva.setHabitos(request.habitos() != null ? request.habitos().trim() : null);
+        nueva.setAntecedentesOdontologicos(request.antecedentesOdontologicos() != null ? request.antecedentesOdontologicos().trim() : null);
+        nueva.setExamenExtraoral(request.examenExtraoral() != null ? request.examenExtraoral().trim() : null);
+        nueva.setExamenIntraoral(request.examenIntraoral() != null ? request.examenIntraoral().trim() : null);
+        nueva.setDiagnostico(request.diagnostico() != null ? request.diagnostico().trim() : null);
+        nueva.setPlanTratamiento(request.planTratamiento() != null ? request.planTratamiento().trim() : null);
+
         HistoriaClinica guardada = historiaRepository.save(nueva);
         log.info("Historia clínica creada exitosamente para paciente ID: {}", pacienteId);
+
+        auditService.registrar(
+            usuarioId,
+            "CREAR",
+            "historia_clinica",
+            guardada.getId(),
+            "Creación de historia clínica para paciente ID: " + pacienteId,
+            ip,
+            null
+        );
 
         return mapearResponse(guardada);
     }
 
     @Transactional
-    public HistoriaClinicaResponse actualizarHistoriaClinica(Long pacienteId, GuardarHistoriaClinicaRequest request) {
+    public HistoriaClinicaResponse actualizarHistoriaClinica(Long pacienteId, GuardarHistoriaClinicaRequest request, Long usuarioId, String ip) {
         HistoriaClinica historia = historiaRepository.findByPacienteId(pacienteId)
             .orElseThrow(() -> new ResourceNotFoundException("No se encontró la historia clínica para el paciente ID: " + pacienteId));
 
-        if (request.antecedentes() != null) {
-            historia.setAntecedentes(request.antecedentes().trim());
+        if (request.motivoConsulta() != null) historia.setMotivoConsulta(request.motivoConsulta().trim());
+        if (request.enfermedadActual() != null) historia.setEnfermedadActual(request.enfermedadActual().trim());
+        if (request.alergias() != null) historia.setAlergias(request.alergias().trim());
+
+        String antMed = request.antecedentesMedicos() != null ? request.antecedentesMedicos().trim() : request.antecedentes();
+        if (antMed != null) {
+            historia.setAntecedentesMedicos(antMed.trim());
+            historia.setAntecedentes(antMed.trim());
         }
-        if (request.alergias() != null) {
-            historia.setAlergias(request.alergias().trim());
-        }
-        if (request.observacionesGenerales() != null) {
-            historia.setObservacionesGenerales(request.observacionesGenerales().trim());
-        }
+
+        if (request.medicamentosActuales() != null) historia.setMedicamentosActuales(request.medicamentosActuales().trim());
+        if (request.habitos() != null) historia.setHabitos(request.habitos().trim());
+        if (request.antecedentesOdontologicos() != null) historia.setAntecedentesOdontologicos(request.antecedentesOdontologicos().trim());
+        if (request.examenExtraoral() != null) historia.setExamenExtraoral(request.examenExtraoral().trim());
+        if (request.examenIntraoral() != null) historia.setExamenIntraoral(request.examenIntraoral().trim());
+        if (request.diagnostico() != null) historia.setDiagnostico(request.diagnostico().trim());
+        if (request.planTratamiento() != null) historia.setPlanTratamiento(request.planTratamiento().trim());
+        if (request.observacionesGenerales() != null) historia.setObservacionesGenerales(request.observacionesGenerales().trim());
 
         HistoriaClinica actualizada = historiaRepository.save(historia);
         log.info("Historia clínica actualizada para paciente ID: {}", pacienteId);
+
+        auditService.registrar(
+            usuarioId,
+            "ACTUALIZAR",
+            "historia_clinica",
+            actualizada.getId(),
+            "Actualización de historia clínica para paciente ID: " + pacienteId,
+            ip,
+            null
+        );
 
         return mapearResponse(actualizada);
     }
@@ -139,7 +186,6 @@ public class HistoriaClinicaService {
                 }
             }
         }
-        // Fallback al primer odontólogo activo disponible (ej. si actúa como ADMIN)
         return odontologoRepository.findAll().stream()
             .filter(o -> Boolean.TRUE.equals(o.getActivo()))
             .findFirst()
@@ -163,6 +209,36 @@ public class HistoriaClinicaService {
         boolean tieneOdontograma = odontogramaRepository.findFirstByHistoriaClinicaIdOrderByFechaDesc(h.getId()).isPresent();
         int totalEvoluciones = evolucionRepository.findByHistoriaClinicaIdWithOdontologo(h.getId()).size();
 
+        // Valores estructurados con fallback a JSON en observacionesGenerales para compatibilidad
+        String motivo = h.getMotivoConsulta();
+        String enfActual = h.getEnfermedadActual();
+        String antMed = h.getAntecedentesMedicos() != null ? h.getAntecedentesMedicos() : h.getAntecedentes();
+        String medAct = h.getMedicamentosActuales();
+        String hab = h.getHabitos();
+        String antOdon = h.getAntecedentesOdontologicos();
+        String exExt = h.getExamenExtraoral();
+        String exInt = h.getExamenIntraoral();
+        String diag = h.getDiagnostico();
+        String planTrat = h.getPlanTratamiento();
+
+        if (h.getObservacionesGenerales() != null && h.getObservacionesGenerales().trim().startsWith("{")) {
+            try {
+                JsonNode root = objectMapper.readTree(h.getObservacionesGenerales());
+                if (motivo == null && root.hasNonNull("motivoConsulta")) motivo = root.get("motivoConsulta").asText();
+                if (enfActual == null && root.hasNonNull("enfermedadActual")) enfActual = root.get("enfermedadActual").asText();
+                if (antMed == null && root.hasNonNull("antecedentesMedicos")) antMed = root.get("antecedentesMedicos").asText();
+                if (medAct == null && root.hasNonNull("medicamentosActuales")) medAct = root.get("medicamentosActuales").asText();
+                if (hab == null && root.hasNonNull("habitos")) hab = root.get("habitos").asText();
+                if (antOdon == null && root.hasNonNull("antecedentesOdontologicos")) antOdon = root.get("antecedentesOdontologicos").asText();
+                if (exExt == null && root.hasNonNull("examenExtraoral")) exExt = root.get("examenExtraoral").asText();
+                if (exInt == null && root.hasNonNull("examenIntraoral")) exInt = root.get("examenIntraoral").asText();
+                if (diag == null && root.hasNonNull("diagnostico")) diag = root.get("diagnostico").asText();
+                if (planTrat == null && root.hasNonNull("planTratamiento")) planTrat = root.get("planTratamiento").asText();
+            } catch (Exception ex) {
+                log.debug("No se pudo parsear JSON legacy de observacionesGenerales: {}", ex.getMessage());
+            }
+        }
+
         return new HistoriaClinicaResponse(
             h.getId(),
             p.getId(),
@@ -171,8 +247,18 @@ public class HistoriaClinicaService {
             p.getNumeroDocumento(),
             p.getFechaNacimiento(),
             edad,
+            motivo,
+            enfActual,
             h.getAntecedentes(),
             h.getAlergias(),
+            antMed,
+            medAct,
+            hab,
+            antOdon,
+            exExt,
+            exInt,
+            diag,
+            planTrat,
             h.getObservacionesGenerales(),
             h.getFechaCreacion(),
             h.getFechaActualizacion(),

@@ -6,9 +6,11 @@ import com.neodent.historia.repository.HistoriaClinicaRepository;
 import com.neodent.historia.service.HistoriaClinicaService;
 import com.neodent.odontograma.dto.*;
 import com.neodent.odontograma.model.CondicionOdontograma;
+import com.neodent.odontograma.model.CatalogoPiezaDental;
 import com.neodent.odontograma.model.Odontograma;
 import com.neodent.odontograma.model.OdontogramaDetalle;
 import com.neodent.odontograma.repository.CondicionOdontogramaRepository;
+import com.neodent.odontograma.repository.CatalogoPiezaDentalRepository;
 import com.neodent.odontograma.repository.OdontogramaDetalleRepository;
 import com.neodent.odontograma.repository.OdontogramaRepository;
 import com.neodent.odontologo.model.Odontologo;
@@ -31,36 +33,37 @@ public class OdontogramaService {
     private final OdontogramaRepository odontogramaRepository;
     private final OdontogramaDetalleRepository detalleRepository;
     private final CondicionOdontogramaRepository condicionRepository;
+    private final CatalogoPiezaDentalRepository catalogoPiezaRepository;
     private final HistoriaClinicaRepository historiaRepository;
     private final PacienteRepository pacienteRepository;
     private final HistoriaClinicaService historiaClinicaService;
     private final CitaRepository citaRepository;
 
     private static final List<CondicionOdontograma> CONDICIONES_CATALOGO_COMPLETO = List.of(
-        new CondicionOdontograma("CARIES", "Caries Dental", "Lesión cariosa activa o recidivante", "#EF4444", true),
-        new CondicionOdontograma("RESTAURACION", "Restauración / Obturación", "Resina compuesta, amalgama o ionómero", "#3B82F6", true),
-        new CondicionOdontograma("CORONA", "Corona Protésica", "Corona fija o funda dental protésica", "#A855F7", true),
-        new CondicionOdontograma("AUSENTE", "Pieza Ausente", "Pieza dental extraída o ausente", "#64748B", true),
-        new CondicionOdontograma("ENDODONCIA", "Endodoncia / Conducto", "Tratamiento pulpar o conducto realizado", "#F97316", true),
-        new CondicionOdontograma("SELLANTE", "Sellante de Fosas", "Sellado preventivo de fosas y fisuras", "#06B6D4", true),
-        new CondicionOdontograma("FRACTURA", "Fractura / Fisura", "Pérdida de tejido dentario por traumatismo o fisura", "#E11D48", true),
-        new CondicionOdontograma("IMPLANTE", "Implante Dental", "Implante osteointegrado o prótesis sobre implante", "#8B5CF6", true),
-        new CondicionOdontograma("PROTESIS_REMOVIBLE", "Prótesis Removible", "Aparato protésico removible parcial o total", "#F59E0B", true),
-        new CondicionOdontograma("DIENTE_IMPACTADO", "Diente Impactado / Retenido", "Pieza dental no erupcionada retenida en hueso", "#EC4899", true),
-        new CondicionOdontograma("SANO", "Sano / Normal", "Pieza íntegra sin hallazgos patológicos", "#10B981", true)
+        new CondicionOdontograma("CARIES", "Caries Dental", "Lesión cariosa activa o recidivante", "#EF4444", true, "SUPERFICIE"),
+        new CondicionOdontograma("RESTAURACION", "Restauración / Obturación", "Resina compuesta, amalgama o ionómero", "#3B82F6", true, "SUPERFICIE"),
+        new CondicionOdontograma("CORONA", "Corona Protésica", "Corona fija o funda dental protésica", "#A855F7", true, "PIEZA_COMPLETA"),
+        new CondicionOdontograma("AUSENTE", "Pieza Ausente", "Pieza dental extraída o ausente", "#64748B", true, "PIEZA_COMPLETA"),
+        new CondicionOdontograma("ENDODONCIA", "Endodoncia / Conducto", "Tratamiento pulpar o conducto realizado", "#F97316", true, "PIEZA_COMPLETA"),
+        new CondicionOdontograma("SELLANTE", "Sellante de Fosas", "Sellado preventivo de fosas y fisuras", "#06B6D4", true, "SUPERFICIE"),
+        new CondicionOdontograma("FRACTURA", "Fractura / Fisura", "Pérdida de tejido dentario por traumatismo o fisura", "#E11D48", true, "AMBOS"),
+        new CondicionOdontograma("IMPLANTE", "Implante Dental", "Implante osteointegrado o prótesis sobre implante", "#8B5CF6", true, "PIEZA_COMPLETA"),
+        new CondicionOdontograma("PROTESIS_REMOVIBLE", "Prótesis Removible", "Aparato protésico removible parcial o total", "#F59E0B", true, "PIEZA_COMPLETA"),
+        new CondicionOdontograma("DIENTE_IMPACTADO", "Diente Impactado / Retenido", "Pieza dental no erupcionada retenida en hueso", "#EC4899", true, "PIEZA_COMPLETA"),
+        new CondicionOdontograma("SANO", "Sano / Normal", "Pieza íntegra sin hallazgos patológicos", "#10B981", true, "AMBOS")
     );
 
     @Transactional
     public List<CondicionOdontogramaResponse> listarCondiciones() {
-        // Asegurar que todas las condiciones clínicas estándar existan en MySQL
-        for (CondicionOdontograma def : CONDICIONES_CATALOGO_COMPLETO) {
-            if (condicionRepository.findByCodigoIgnoreCase(def.getCodigo()).isEmpty()) {
+        // Sembrar condiciones clínicas iniciales solo si la tabla está completamente vacía
+        if (condicionRepository.count() == 0) {
+            for (CondicionOdontograma def : CONDICIONES_CATALOGO_COMPLETO) {
                 try {
                     condicionRepository.save(new CondicionOdontograma(
-                        def.getCodigo(), def.getNombre(), def.getDescripcion(), def.getColorHexadecimal(), true
+                        def.getCodigo(), def.getNombre(), def.getDescripcion(), def.getColorHexadecimal(), true, def.getAplicaA()
                     ));
                 } catch (Exception ex) {
-                    log.debug("Condición {} no pudo guardarse o ya existe: {}", def.getCodigo(), ex.getMessage());
+                    log.debug("Condición {} no pudo sembrarse: {}", def.getCodigo(), ex.getMessage());
                 }
             }
         }
@@ -74,7 +77,8 @@ public class OdontogramaService {
                 c.getNombre(),
                 c.getDescripcion(),
                 c.getColorHexadecimal(),
-                c.getActivo()
+                c.getActivo(),
+                c.getAplicaA() != null ? c.getAplicaA() : "AMBOS"
             ))
             .toList();
     }
@@ -100,17 +104,26 @@ public class OdontogramaService {
             ? request.colorHexadecimal().trim()
             : "#3B82F6";
 
+        String aplicaA = "AMBOS";
+        if (request.aplicaA() != null && !request.aplicaA().isBlank()) {
+            String candidate = request.aplicaA().trim().toUpperCase();
+            if ("PIEZA_COMPLETA".equals(candidate) || "SUPERFICIE".equals(candidate)) {
+                aplicaA = candidate;
+            }
+        }
+
         CondicionOdontograma nueva = new CondicionOdontograma(
             codigo,
             request.nombre().trim(),
             request.descripcion() != null && !request.descripcion().isBlank() ? request.descripcion().trim() : null,
             color,
-            true
+            true,
+            aplicaA
         );
 
         CondicionOdontograma guardada = condicionRepository.save(nueva);
-        log.info("Nueva condición dental creada por usuario: ID={}, Código={}, Nombre={}",
-            guardada.getId(), guardada.getCodigo(), guardada.getNombre());
+        log.info("Nueva condición dental creada por usuario: ID={}, Código={}, Nombre={}, AplicaA={}",
+            guardada.getId(), guardada.getCodigo(), guardada.getNombre(), guardada.getAplicaA());
 
         return new CondicionOdontogramaResponse(
             guardada.getId(),
@@ -118,6 +131,90 @@ public class OdontogramaService {
             guardada.getNombre(),
             guardada.getDescripcion(),
             guardada.getColorHexadecimal(),
+            guardada.getActivo(),
+            guardada.getAplicaA()
+        );
+    }
+
+    @Transactional
+    public CondicionOdontogramaResponse actualizarCondicion(Integer id, CrearCondicionRequest request) {
+        CondicionOdontograma c = condicionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Condición odontológica no encontrada"));
+
+        if (request.nombre() != null && !request.nombre().isBlank()) {
+            c.setNombre(request.nombre().trim());
+        }
+        if (request.descripcion() != null) {
+            c.setDescripcion(request.descripcion().isBlank() ? null : request.descripcion().trim());
+        }
+        if (request.colorHexadecimal() != null && request.colorHexadecimal().startsWith("#")) {
+            c.setColorHexadecimal(request.colorHexadecimal().trim());
+        }
+        if (request.aplicaA() != null && !request.aplicaA().isBlank()) {
+            String candidate = request.aplicaA().trim().toUpperCase();
+            if ("PIEZA_COMPLETA".equals(candidate) || "SUPERFICIE".equals(candidate) || "AMBOS".equals(candidate)) {
+                c.setAplicaA(candidate);
+            }
+        }
+
+        CondicionOdontograma guardada = condicionRepository.save(c);
+        log.info("Condición dental actualizada en BD: ID={}, Nombre={}, AplicaA={}",
+            guardada.getId(), guardada.getNombre(), guardada.getAplicaA());
+
+        return new CondicionOdontogramaResponse(
+            guardada.getId(),
+            guardada.getCodigo(),
+            guardada.getNombre(),
+            guardada.getDescripcion(),
+            guardada.getColorHexadecimal(),
+            guardada.getActivo(),
+            guardada.getAplicaA()
+        );
+    }
+
+    @Transactional
+    public void eliminarCondicion(Integer id) {
+        CondicionOdontograma c = condicionRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Condición odontológica no encontrada"));
+
+        boolean enUso = detalleRepository.existsByCondicionId(id);
+        if (enUso) {
+            c.setActivo(false);
+            condicionRepository.save(c);
+            log.info("Condición dental desactivada en BD: ID={}, Código={}", id, c.getCodigo());
+        } else {
+            condicionRepository.delete(c);
+            log.info("Condición dental eliminada permanentemente de la BD: ID={}, Código={}", id, c.getCodigo());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<PiezaDentalCatalogoResponse> listarCatalogoPiezas() {
+        return catalogoPiezaRepository.findByActivoTrueOrderByNumeroPiezaAsc().stream()
+            .map(p -> new PiezaDentalCatalogoResponse(
+                p.getNumeroPieza(),
+                p.getNombre(),
+                p.getTipoDenticion(),
+                p.getCuadrante(),
+                p.getActivo()
+            ))
+            .toList();
+    }
+
+    @Transactional
+    public PiezaDentalCatalogoResponse actualizarNombrePieza(Integer numeroPieza, ActualizarNombrePiezaRequest request) {
+        CatalogoPiezaDental pieza = catalogoPiezaRepository.findById(numeroPieza)
+            .orElseThrow(() -> new ResourceNotFoundException("Pieza dental no encontrada en el catálogo: " + numeroPieza));
+
+        pieza.setNombre(request.nombre().trim());
+        CatalogoPiezaDental guardada = catalogoPiezaRepository.save(pieza);
+        log.info("Nombre de pieza dental {} actualizado en catálogo a: '{}'", numeroPieza, guardada.getNombre());
+
+        return new PiezaDentalCatalogoResponse(
+            guardada.getNumeroPieza(),
+            guardada.getNombre(),
+            guardada.getTipoDenticion(),
+            guardada.getCuadrante(),
             guardada.getActivo()
         );
     }
@@ -151,7 +248,7 @@ public class OdontogramaService {
         if (condicion == null && request.idCondicion() != null && request.idCondicion() > 0 && request.idCondicion() <= CONDICIONES_CATALOGO_COMPLETO.size()) {
             CondicionOdontograma def = CONDICIONES_CATALOGO_COMPLETO.get(request.idCondicion() - 1);
             condicion = condicionRepository.findByCodigoIgnoreCase(def.getCodigo()).orElseGet(() ->
-                condicionRepository.save(new CondicionOdontograma(def.getCodigo(), def.getNombre(), def.getDescripcion(), def.getColorHexadecimal(), true))
+                condicionRepository.save(new CondicionOdontograma(def.getCodigo(), def.getNombre(), def.getDescripcion(), def.getColorHexadecimal(), true, def.getAplicaA()))
             );
         }
         if (condicion == null) {
@@ -160,22 +257,31 @@ public class OdontogramaService {
 
         String sup = normalizarSuperficie(request.superficie());
         Byte piezaByte = request.numeroPieza() != null ? request.numeroPieza().byteValue() : null;
+        String ambito = condicion.getAplicaA() != null ? condicion.getAplicaA().toUpperCase() : "AMBOS";
+
+        // Normalización automática de ámbito para proteger transiciones de estado y compatibilidad clínica
+        if ("PIEZA_COMPLETA".equals(ambito)) {
+            sup = "GENERAL";
+        } else if ("SUPERFICIE".equals(ambito) && (sup == null || "GENERAL".equalsIgnoreCase(sup))) {
+            sup = "OCLUSAL";
+        }
+        boolean esPiezaCompleta = sup == null || "GENERAL".equalsIgnoreCase(sup);
 
         // Si la condición es "SANO", removemos cualquier hallazgo patológico previo en esa superficie/pieza
         if ("SANO".equalsIgnoreCase(condicion.getCodigo())) {
-            if (sup == null || "GENERAL".equalsIgnoreCase(sup)) {
+            if (esPiezaCompleta) {
                 detalleRepository.deleteByOdontogramaIdAndNumeroPieza(odontograma.getId(), piezaByte);
             } else {
                 detalleRepository.deleteByOdontogramaIdAndNumeroPiezaAndSuperficie(odontograma.getId(), piezaByte, sup);
             }
         } else {
-            // Si la nueva condición es AUSENTE o CORONA (condición de pieza completa), limpia superficies individuales
-            if ("AUSENTE".equalsIgnoreCase(condicion.getCodigo()) || "CORONA".equalsIgnoreCase(condicion.getCodigo()) || sup == null || "GENERAL".equalsIgnoreCase(sup)) {
+            // Si es condición de pieza completa, limpia todas las superficies previas
+            if (esPiezaCompleta) {
                 detalleRepository.deleteByOdontogramaIdAndNumeroPieza(odontograma.getId(), piezaByte);
                 sup = "GENERAL";
             } else {
-                // Si es por superficie, elimina hallazgo previo de pieza completa o de la misma superficie
-                detalleRepository.deleteByOdontogramaIdAndNumeroPiezaAndSuperficie(odontograma.getId(), piezaByte, "GENERAL");
+                // Si es por superficie, elimina hallazgo previo de pieza completa y el previo en la misma superficie
+                detalleRepository.deleteGeneralByOdontogramaIdAndNumeroPieza(odontograma.getId(), piezaByte);
                 detalleRepository.deleteByOdontogramaIdAndNumeroPiezaAndSuperficie(odontograma.getId(), piezaByte, sup);
             }
 

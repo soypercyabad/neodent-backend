@@ -6,5 +6,6 @@ public record CondicionOdontogramaResponse(
     String nombre,
     String descripcion,
     String colorHexadecimal,
-    Boolean activo
+    Boolean activo,
+    String aplicaA
 ) {}

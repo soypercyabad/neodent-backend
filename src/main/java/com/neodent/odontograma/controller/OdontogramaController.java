@@ -33,12 +33,48 @@ public class OdontogramaController {
 
     @Operation(summary = "Crear nueva condición clínica o tratamiento personalizado")
     @PostMapping("/odontograma/condiciones")
-    @PreAuthorize("hasAnyRole('ODONTOLOGO', 'ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CondicionOdontogramaResponse> crearCondicion(
         @Valid @RequestBody com.neodent.odontograma.dto.CrearCondicionRequest request
     ) {
         CondicionOdontogramaResponse response = odontogramaService.crearCondicion(request);
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "Actualizar condición clínica existente")
+    @PutMapping("/odontograma/condiciones/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CondicionOdontogramaResponse> actualizarCondicion(
+        @PathVariable Integer id,
+        @Valid @RequestBody com.neodent.odontograma.dto.CrearCondicionRequest request
+    ) {
+        CondicionOdontogramaResponse response = odontogramaService.actualizarCondicion(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Eliminar o desactivar condición clínica del odontograma")
+    @DeleteMapping("/odontograma/condiciones/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> eliminarCondicion(@PathVariable Integer id) {
+        odontogramaService.eliminarCondicion(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Catálogo de piezas dentales registradas (FDI)")
+    @GetMapping("/odontograma/piezas")
+    @PreAuthorize("hasAnyRole('ODONTOLOGO', 'ADMIN', 'RECEPCIONISTA', 'PACIENTE')")
+    public ResponseEntity<List<com.neodent.odontograma.dto.PiezaDentalCatalogoResponse>> listarCatalogoPiezas() {
+        return ResponseEntity.ok(odontogramaService.listarCatalogoPiezas());
+    }
+
+    @Operation(summary = "Actualizar nombre o descripción anatómica de una pieza dental")
+    @PutMapping("/odontograma/piezas/{numeroPieza}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<com.neodent.odontograma.dto.PiezaDentalCatalogoResponse> actualizarNombrePieza(
+        @PathVariable Integer numeroPieza,
+        @Valid @RequestBody com.neodent.odontograma.dto.ActualizarNombrePiezaRequest request
+    ) {
+        return ResponseEntity.ok(odontogramaService.actualizarNombrePieza(numeroPieza, request));
     }
 
     @Operation(summary = "Consultar el odontograma actual del paciente")

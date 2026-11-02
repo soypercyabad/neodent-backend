@@ -48,14 +48,22 @@ public class R2StorageService implements StorageService {
 
     @PostConstruct
     void inicializar() {
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
-        S3Configuration configuracionS3 = S3Configuration.builder().pathStyleAccessEnabled(true).chunkedEncodingEnabled(false).build();
-        s3Client = S3Client.builder()
-                .endpointOverride(URI.create(endpoint))
-                .region(Region.of("auto"))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                .serviceConfiguration(configuracionS3)
-                .build();
+        if (accessKey == null || accessKey.isBlank() || secretKey == null || secretKey.isBlank() || endpoint == null || endpoint.isBlank()) {
+            log.warn("Cloudflare R2 no está configurado (accessKey/secretKey/endpoint faltante). R2StorageService correrá en modo inactivo.");
+            return;
+        }
+        try {
+            AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+            S3Configuration configuracionS3 = S3Configuration.builder().pathStyleAccessEnabled(true).chunkedEncodingEnabled(false).build();
+            s3Client = S3Client.builder()
+                    .endpointOverride(URI.create(endpoint))
+                    .region(Region.of("auto"))
+                    .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                    .serviceConfiguration(configuracionS3)
+                    .build();
+        } catch (Exception e) {
+            log.warn("No se pudo inicializar S3Client para Cloudflare R2: {}", e.getMessage());
+        }
     }
 
     @Override

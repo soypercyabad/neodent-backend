@@ -6,6 +6,7 @@ import com.neodent.historia.dto.HistoriaClinicaResponse;
 import com.neodent.historia.service.HistoriaClinicaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,25 +35,33 @@ public class HistoriaClinicaController {
             .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    @Operation(summary = "Crear historia clínica inicial para un paciente")
+    @Operation(summary = "Crear historia clínica inicial para un paciente (solo Odontólogo o Admin)")
     @PostMapping
-    @PreAuthorize("hasAnyRole('ODONTOLOGO', 'ADMIN', 'PACIENTE')")
+    @PreAuthorize("hasAnyRole('ODONTOLOGO', 'ADMIN')")
     public ResponseEntity<HistoriaClinicaResponse> crearHistoriaClinica(
         @PathVariable Long pacienteId,
-        @Valid @RequestBody GuardarHistoriaClinicaRequest request
+        @Valid @RequestBody GuardarHistoriaClinicaRequest request,
+        @AuthenticationPrincipal Jwt jwt,
+        HttpServletRequest servletRequest
     ) {
-        HistoriaClinicaResponse response = historiaService.crearHistoriaClinica(pacienteId, request);
+        Long usuarioId = jwt != null ? Long.valueOf(jwt.getSubject()) : null;
+        String ip = servletRequest != null ? servletRequest.getRemoteAddr() : null;
+        HistoriaClinicaResponse response = historiaService.crearHistoriaClinica(pacienteId, request, usuarioId, ip);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "Actualizar antecedentes y datos de la historia clínica")
+    @Operation(summary = "Actualizar antecedentes y datos de la historia clínica (solo Odontólogo o Admin)")
     @PutMapping
-    @PreAuthorize("hasAnyRole('ODONTOLOGO', 'ADMIN', 'PACIENTE')")
+    @PreAuthorize("hasAnyRole('ODONTOLOGO', 'ADMIN')")
     public ResponseEntity<HistoriaClinicaResponse> actualizarHistoriaClinica(
         @PathVariable Long pacienteId,
-        @Valid @RequestBody GuardarHistoriaClinicaRequest request
+        @Valid @RequestBody GuardarHistoriaClinicaRequest request,
+        @AuthenticationPrincipal Jwt jwt,
+        HttpServletRequest servletRequest
     ) {
-        HistoriaClinicaResponse response = historiaService.actualizarHistoriaClinica(pacienteId, request);
+        Long usuarioId = jwt != null ? Long.valueOf(jwt.getSubject()) : null;
+        String ip = servletRequest != null ? servletRequest.getRemoteAddr() : null;
+        HistoriaClinicaResponse response = historiaService.actualizarHistoriaClinica(pacienteId, request, usuarioId, ip);
         return ResponseEntity.ok(response);
     }
 

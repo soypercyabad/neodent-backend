@@ -15,5 +15,8 @@ public record CrearCondicionRequest(
     String descripcion,
 
     @Size(max = 7, message = "El color hexadecimal debe ser válido (ej. #EF4444)")
-    String colorHexadecimal
+    String colorHexadecimal,
+
+    @Size(max = 20, message = "El ámbito aplicaA debe ser PIEZA_COMPLETA, SUPERFICIE o AMBOS")
+    String aplicaA
 ) {}

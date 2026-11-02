@@ -70,11 +70,13 @@ public class SecurityConfig {
                     "/api/terminos-condiciones/aceptar"
                 ).authenticated()
 
-                /* Catálogo de condiciones del odontograma */
+                /* Catálogo de condiciones y piezas del odontograma */
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/odontograma/condiciones",
-                    "/api/odontograma/condiciones/**"
+                    "/api/odontograma/condiciones/**",
+                    "/api/odontograma/piezas",
+                    "/api/odontograma/piezas/**"
                 ).hasAnyRole(
                     AppConstants.Roles.ADMIN,
                     AppConstants.Roles.RECEPCIONISTA,
@@ -84,6 +86,21 @@ public class SecurityConfig {
                 .requestMatchers(
                     HttpMethod.POST,
                     "/api/odontograma/condiciones",
+                    "/api/odontograma/condiciones/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/odontograma/condiciones/**",
+                    "/api/odontograma/piezas/**"
+                ).hasAnyRole(
+                    AppConstants.Roles.ADMIN,
+                    AppConstants.Roles.ODONTOLOGO
+                )
+                .requestMatchers(
+                    HttpMethod.DELETE,
                     "/api/odontograma/condiciones/**"
                 ).hasAnyRole(
                     AppConstants.Roles.ADMIN,

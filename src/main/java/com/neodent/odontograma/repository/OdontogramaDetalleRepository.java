@@ -29,4 +29,10 @@ public interface OdontogramaDetalleRepository extends JpaRepository<OdontogramaD
     void deleteByOdontogramaIdAndNumeroPieza(Long odontogramaId, Byte numeroPieza);
 
     void deleteByOdontogramaIdAndNumeroPiezaAndSuperficie(Long odontogramaId, Byte numeroPieza, String superficie);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM OdontogramaDetalle d WHERE d.odontograma.id = :odontogramaId AND d.numeroPieza = :numeroPieza AND (d.superficie = 'GENERAL' OR d.superficie IS NULL)")
+    void deleteGeneralByOdontogramaIdAndNumeroPieza(@Param("odontogramaId") Long odontogramaId, @Param("numeroPieza") Byte numeroPieza);
+
+    boolean existsByCondicionId(Integer condicionId);
 }

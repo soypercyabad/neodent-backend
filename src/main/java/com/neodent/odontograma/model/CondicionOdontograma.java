@@ -32,11 +32,19 @@ public class CondicionOdontograma {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    @Column(name = "aplica_a", nullable = false, length = 20)
+    private String aplicaA = "AMBOS";
+
     public CondicionOdontograma(String codigo, String nombre, String descripcion, String colorHexadecimal, Boolean activo) {
+        this(codigo, nombre, descripcion, colorHexadecimal, activo, "AMBOS");
+    }
+
+    public CondicionOdontograma(String codigo, String nombre, String descripcion, String colorHexadecimal, Boolean activo, String aplicaA) {
         this.codigo = codigo;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.colorHexadecimal = colorHexadecimal;
         this.activo = activo != null ? activo : true;
+        this.aplicaA = aplicaA != null && !aplicaA.isBlank() ? aplicaA.trim().toUpperCase() : "AMBOS";
     }
 }
