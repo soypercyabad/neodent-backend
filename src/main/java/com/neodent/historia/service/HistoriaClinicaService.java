@@ -55,7 +55,8 @@ public class HistoriaClinicaService {
     @Transactional
     public HistoriaClinicaResponse crearHistoriaClinica(Long pacienteId, GuardarHistoriaClinicaRequest request, Long usuarioId, String ip) {
         if (historiaRepository.existsByPacienteId(pacienteId)) {
-            throw new BusinessException("El paciente ya cuenta con una historia clínica registrada.");
+            log.info("Historia clínica ya existe para paciente ID: {}. Delegando a actualización.", pacienteId);
+            return actualizarHistoriaClinica(pacienteId, request, usuarioId, ip);
         }
 
         Paciente paciente = pacienteRepository.findById(pacienteId)
@@ -239,6 +240,20 @@ public class HistoriaClinicaService {
             }
         }
 
+        String obsGen = h.getObservacionesGenerales();
+        if (obsGen != null && obsGen.trim().startsWith("{") && obsGen.trim().endsWith("}")) {
+            try {
+                JsonNode root = objectMapper.readTree(obsGen);
+                if (root.hasNonNull("observacionesClinicas")) {
+                    obsGen = root.get("observacionesClinicas").asText();
+                } else {
+                    obsGen = "";
+                }
+            } catch (Exception ex) {
+                log.debug("No se pudo parsear observacionesGenerales: {}", ex.getMessage());
+            }
+        }
+
         return new HistoriaClinicaResponse(
             h.getId(),
             p.getId(),
@@ -259,7 +274,7 @@ public class HistoriaClinicaService {
             exInt,
             diag,
             planTrat,
-            h.getObservacionesGenerales(),
+            obsGen,
             h.getFechaCreacion(),
             h.getFechaActualizacion(),
             tieneOdontograma,
