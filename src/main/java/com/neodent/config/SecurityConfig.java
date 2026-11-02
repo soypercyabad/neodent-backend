@@ -365,9 +365,8 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/horarios/**",
                     "/api/bloqueos/**"
-                ).hasAnyRole(
-                    AppConstants.Roles.ADMIN,
-                    AppConstants.Roles.RECEPCIONISTA
+                ).hasRole(
+                    AppConstants.Roles.ADMIN
                 )
 
                 /* Fotografías profesionales de odontólogos */

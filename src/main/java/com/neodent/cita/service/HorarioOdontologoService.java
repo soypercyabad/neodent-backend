@@ -157,9 +157,12 @@ public class HorarioOdontologoService {
                 var odontologo = oe.getOdontologo();
                 var personal = odontologo.getPersonal();
 
+                var usuario = personal.getUsuario();
                 return new HorarioOdontologoCatalogoResponse(
                     oe.getId(),
                     odontologo.getId(),
+                    usuario != null ? usuario.getId() : null,
+                    usuario != null ? usuario.getCorreo() : null,
                     personal.getNombres(),
                     personal.getApellidoPaterno(),
                     personal.getApellidoMaterno(),
